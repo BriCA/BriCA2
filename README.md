@@ -1,2 +1,2 @@
-# BriCA2
-Brain-inspired Computing Architecture Version 2
+# BriCA
+Brain-inspired Computing Architecture kernel implementation.

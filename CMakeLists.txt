@@ -1,25 +1,25 @@
 cmake_minimum_required(VERSION 2.8)
 
-option(test "Build all tests." OFF)
-option(benchmark "Build all benchmarks." OFF)
+option(BRICA_TEST "build tests" ON)
+option(BRICA_BENCH "build benchmarks" OFF)
 
-set(PROJECT_NAME BriCA2)
+set(PROJECT_NAME BriCA)
 project(${PROJECT_NAME})
-set(BRICA2_VERSION_MAJOR 1)
-set(BRICA2_VERSION_MINOR 0)
-set(BRICA2_VERSION_PATCH 0)
+set(BRICA_VERSION_MAJOR 1)
+set(BRICA_VERSION_MINOR 0)
+set(BRICA_VERSION_PATCH 0)
 
-add_definitions("-std=c++11")
+# Enable C++11
+include(CheckCXXCompilerFlag)
+check_cxx_compiler_flag("-std=c++11" STD_CXX11)
+if(STD_CXX11)
+  add_definitions("-std=c++11")
+else()
+  add_definitions("-std=c++0x")
+endif()
 
-include_directories(${PROJECT_SOURCE_DIR})
-include_directories(${PROJECT_BINARY_DIR})
+# Project include directory
+include_directories(include)
 
-find_package(Boost COMPONENTS python REQUIRED)
-include_directories(${Boost_INCLUDE_DIRS})
-
-find_package(PythonLibs 2.7 REQUIRED)
-include_directories(${PYTHON_INCLUDE_DIRS})
-
-add_subdirectory(brica2)
+add_subdirectory(vendor)
 add_subdirectory(tests)
-
