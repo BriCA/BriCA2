@@ -48,9 +48,6 @@ class Component : public IComponent {
  public:
   class Port {
    public:
-    void send(Buffer& value) { set(value); }
-    const Buffer& recv() const { return get(); }
-
     void set(Buffer& value) { buffer = value; }
     const Buffer& get() const { return buffer; }
 
@@ -89,7 +86,7 @@ class Component : public IComponent {
 
   void collect() {
     for (std::size_t i = 0; i < inputs.size(); ++i) {
-      inputs.index(i) = in_port.index(i)->recv();
+      inputs.index(i) = in_port.index(i)->get();
     }
   }
 
@@ -97,7 +94,7 @@ class Component : public IComponent {
 
   void expose() {
     for (std::size_t i = 0; i < outputs.size(); ++i) {
-      out_port.index(i)->send(outputs.index(i));
+      out_port.index(i)->set(outputs.index(i));
     }
   }
 
