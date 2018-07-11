@@ -1,7 +1,6 @@
 cmake_minimum_required(VERSION 2.8)
 
 option(BRICA_TEST "build tests" ON)
-option(BRICA_BENCH "build benchmarks" OFF)
 
 set(PROJECT_NAME BriCA)
 project(${PROJECT_NAME})
