@@ -31,7 +31,7 @@
 namespace brica {
 namespace mpi {
 
-class Component : IComponent {
+class Component : public IComponent {
   class Port {
    public:
     Port(int rank, int tag = 0) : target(rank), tag(tag) {}
