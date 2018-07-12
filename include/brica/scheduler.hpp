@@ -33,6 +33,8 @@ namespace brica {
 using Time = unsigned long long;
 
 struct Timing {
+  Timing(Time offset, Time interval, Time sleep)
+      : offset(offset), interval(interval), sleep(sleep) {}
   Time offset;
   Time interval;
   Time sleep;
