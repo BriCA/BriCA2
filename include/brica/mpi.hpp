@@ -132,6 +132,66 @@ class Component : public IComponent {
   Ports out_port;
 };
 
+class VirtualTimeScheduler : public IScheduler {
+  struct Event {
+    Time time;
+    IComponent* component;
+    Timing timing;
+    bool sleep;
+
+    bool operator<(const Event& rhs) const { return time > rhs.time; }
+  };
+
+ public:
+  void add_component(IComponent* component, Timing timing) {
+    event_queue.push({timing.offset, component, timing, false});
+  }
+
+  void step() {
+    Time time = event_queue.top().time;
+
+    std::queue<IComponent*> awake;
+    std::queue<IComponent*> asleep;
+
+    while (event_queue.top().time == time) {
+      Event event = event_queue.top();
+      event_queue.pop();
+
+      Event next = event;
+
+      if (event.sleep) {
+        asleep.push(event.component);
+        next.time += next.timing.sleep;
+        next.sleep = false;
+      } else {
+        awake.push(event.component);
+        next.time += next.timing.interval;
+        next.sleep = true;
+      }
+
+      event_queue.push(next);
+    }
+
+    while (!asleep.empty()) {
+      asleep.front()->expose();
+      asleep.pop();
+    }
+
+    MPI_Barrier(MPI_COMM_WORLD);
+
+    while (!awake.empty()) {
+      awake.front()->collect();
+      awake.front()->execute();
+      awake.pop();
+    }
+
+    MPI_Barrier(MPI_COMM_WORLD);
+  }
+
+ private:
+  std::priority_queue<Event> event_queue;
+};
+
 }  // namespace mpi
 }  // namespace brica
 
