@@ -1,9 +1,9 @@
 #include "brica/brica.hpp"
-#include "gtest/gtest.h"
+#include "catch.hpp"
 
 using namespace brica;
 
-TEST(scheduler, emit_pipe_null) {
+TEST_CASE("emit/pipe/null component scheduling", "[scheduler]") {
   std::string key = "default";
   Buffer value({1, 2, 3});
 
@@ -30,57 +30,57 @@ TEST(scheduler, emit_pipe_null) {
   s.add_component(&pipe, t);
   s.add_component(&null, t);
 
-  EXPECT_TRUE(emit.get_output(key).empty());
-  EXPECT_TRUE(emit.get_out_port_buffer(key).empty());
+  CHECK(emit.get_output(key).empty());
+  CHECK(emit.get_out_port_buffer(key).empty());
 
-  EXPECT_TRUE(pipe.get_input(key).empty());
-  EXPECT_TRUE(pipe.get_in_port_buffer(key).empty());
+  CHECK(pipe.get_input(key).empty());
+  CHECK(pipe.get_in_port_buffer(key).empty());
 
-  EXPECT_TRUE(pipe.get_output(key).empty());
-  EXPECT_TRUE(pipe.get_out_port_buffer(key).empty());
+  CHECK(pipe.get_output(key).empty());
+  CHECK(pipe.get_out_port_buffer(key).empty());
 
-  EXPECT_TRUE(null.get_input(key).empty());
-  EXPECT_TRUE(null.get_in_port_buffer(key).empty());
-
-  s.step();
-
-  EXPECT_EQ(value, emit.get_output(key));
-  EXPECT_TRUE(emit.get_out_port_buffer(key).empty());
-
-  EXPECT_TRUE(pipe.get_input(key).empty());
-  EXPECT_TRUE(pipe.get_in_port_buffer(key).empty());
-
-  EXPECT_TRUE(pipe.get_output(key).empty());
-  EXPECT_TRUE(pipe.get_out_port_buffer(key).empty());
-
-  EXPECT_TRUE(null.get_input(key).empty());
-  EXPECT_TRUE(null.get_in_port_buffer(key).empty());
+  CHECK(null.get_input(key).empty());
+  CHECK(null.get_in_port_buffer(key).empty());
 
   s.step();
 
-  EXPECT_EQ(value, emit.get_output(key));
-  EXPECT_EQ(value, emit.get_out_port_buffer(key));
+  CHECK(value == emit.get_output(key));
+  CHECK(emit.get_out_port_buffer(key).empty());
 
-  EXPECT_EQ(value, pipe.get_input(key));
-  EXPECT_EQ(value, pipe.get_in_port_buffer(key));
+  CHECK(pipe.get_input(key).empty());
+  CHECK(pipe.get_in_port_buffer(key).empty());
 
-  EXPECT_EQ(value, pipe.get_output(key));
-  EXPECT_TRUE(pipe.get_out_port_buffer(key).empty());
+  CHECK(pipe.get_output(key).empty());
+  CHECK(pipe.get_out_port_buffer(key).empty());
 
-  EXPECT_TRUE(null.get_input(key).empty());
-  EXPECT_TRUE(null.get_in_port_buffer(key).empty());
+  CHECK(null.get_input(key).empty());
+  CHECK(null.get_in_port_buffer(key).empty());
 
   s.step();
 
-  EXPECT_EQ(value, emit.get_output(key));
-  EXPECT_EQ(value, emit.get_out_port_buffer(key));
+  CHECK(value == emit.get_output(key));
+  CHECK(value == emit.get_out_port_buffer(key));
 
-  EXPECT_EQ(value, pipe.get_input(key));
-  EXPECT_EQ(value, pipe.get_in_port_buffer(key));
+  CHECK(value == pipe.get_input(key));
+  CHECK(value == pipe.get_in_port_buffer(key));
 
-  EXPECT_EQ(value, pipe.get_output(key));
-  EXPECT_EQ(value, pipe.get_out_port_buffer(key));
+  CHECK(value == pipe.get_output(key));
+  CHECK(pipe.get_out_port_buffer(key).empty());
 
-  EXPECT_EQ(value, null.get_input(key));
-  EXPECT_EQ(value, null.get_in_port_buffer(key));
+  CHECK(null.get_input(key).empty());
+  CHECK(null.get_in_port_buffer(key).empty());
+
+  s.step();
+
+  CHECK(value == emit.get_output(key));
+  CHECK(value == emit.get_out_port_buffer(key));
+
+  CHECK(value == pipe.get_input(key));
+  CHECK(value == pipe.get_in_port_buffer(key));
+
+  CHECK(value == pipe.get_output(key));
+  CHECK(value == pipe.get_out_port_buffer(key));
+
+  CHECK(value == null.get_input(key));
+  CHECK(value == null.get_in_port_buffer(key));
 }

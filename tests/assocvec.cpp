@@ -1,7 +1,7 @@
 #include "brica/assocvec.hpp"
-#include "gtest/gtest.h"
+#include "catch.hpp"
 
-TEST(assocvec, default) {
+TEST_CASE("AssocVec key/index access", "[AssocVec]") {
   brica::AssocVec<int, int> map;
 
   int i;
@@ -10,12 +10,12 @@ TEST(assocvec, default) {
   }
 
   for (i = 0; i < 10; ++i) {
-    ASSERT_EQ(i, map[i]);
-    ASSERT_EQ(i, map.index(i));
+    REQUIRE(i == map[i]);
+    REQUIRE(i == map.index(i));
   }
 }
 
-TEST(assocvec, greater) {
+TEST_CASE("AssocVec reverse sort key/index access", "[AssocVec]") {
   brica::AssocVec<int, int, std::greater<int>> map;
 
   int i;
@@ -24,7 +24,7 @@ TEST(assocvec, greater) {
   }
 
   for (i = 0; i < 10; ++i) {
-    ASSERT_EQ(i, map[i]);
-    ASSERT_EQ(9 - i, map.index(i));
+    REQUIRE(i == map[i]);
+    REQUIRE(9 - i == map.index(i));
   }
 }

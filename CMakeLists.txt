@@ -21,21 +21,19 @@ endif()
 # Project include directory
 include_directories(include)
 
-# Add the vendored code
-add_subdirectory(vendor)
-
 # Build tests (if enabled)
 if (BRICA_TEST)
   enable_testing()
-  include_directories(${gtest_SOURCE_DIR}/include)
-  add_executable(unit_tests tests/assocvec.cpp tests/component.cpp tests/scheduler.cpp)
-  target_link_libraries(unit_tests gtest gtest_main)
+  add_executable(unit_tests tests/main.cpp tests/assocvec.cpp tests/component.cpp tests/scheduler.cpp)
   add_test(NAME brica-test COMMAND unit_tests)
 endif()
 
-if (BRICA_MPI_TEST)
-  enable_testing()
-  include_directories(${gtest_SOURCE_DIR}/include)
-  add_executable(mpi_tests tests/mpi.cpp)
-  target_link_libraries(mpi_tests gtest gtest_main)
-endif()
+INSTALL(FILES
+  include/brica/assocvec.hpp
+  include/brica/brica.hpp
+  include/brica/buffer.hpp
+  include/brica/component.hpp
+  include/brica/functor.hpp
+  include/brica/mpi.hpp
+  include/brica/scheduler.hpp
+  DESTINATION include/brica)

@@ -1,9 +1,9 @@
 #include "brica/brica.hpp"
-#include "gtest/gtest.h"
+#include "catch.hpp"
 
 using namespace brica;
 
-TEST(component, emit_pipe_null) {
+TEST_CASE("emit/pipe/null component chain", "[component]") {
   std::string key = "default";
   Buffer value({1, 2, 3});
 
@@ -41,35 +41,35 @@ TEST(component, emit_pipe_null) {
     null.expose();
   };
 
-  ASSERT_TRUE(emit.get_output(key).empty());
-  ASSERT_TRUE(pipe.get_input(key).empty());
-  ASSERT_TRUE(pipe.get_output(key).empty());
-  ASSERT_TRUE(null.get_input(key).empty());
+  REQUIRE(emit.get_output(key).empty());
+  REQUIRE(pipe.get_input(key).empty());
+  REQUIRE(pipe.get_output(key).empty());
+  REQUIRE(null.get_input(key).empty());
 
   collect();
   execute();
   expose();
 
-  ASSERT_EQ(value, emit.get_output(key));
-  ASSERT_TRUE(pipe.get_input(key).empty());
-  ASSERT_TRUE(pipe.get_output(key).empty());
-  ASSERT_TRUE(null.get_input(key).empty());
+  REQUIRE(value == emit.get_output(key));
+  REQUIRE(pipe.get_input(key).empty());
+  REQUIRE(pipe.get_output(key).empty());
+  REQUIRE(null.get_input(key).empty());
 
   collect();
   execute();
   expose();
 
-  ASSERT_EQ(value, emit.get_output(key));
-  ASSERT_EQ(value, pipe.get_input(key));
-  ASSERT_EQ(value, pipe.get_output(key));
-  ASSERT_TRUE(null.get_input(key).empty());
+  REQUIRE(value == emit.get_output(key));
+  REQUIRE(value == pipe.get_input(key));
+  REQUIRE(value == pipe.get_output(key));
+  REQUIRE(null.get_input(key).empty());
 
   collect();
   execute();
   expose();
 
-  ASSERT_EQ(value, emit.get_output(key));
-  ASSERT_EQ(value, pipe.get_input(key));
-  ASSERT_EQ(value, pipe.get_output(key));
-  ASSERT_EQ(value, null.get_input(key));
+  REQUIRE(value == emit.get_output(key));
+  REQUIRE(value == pipe.get_input(key));
+  REQUIRE(value == pipe.get_output(key));
+  REQUIRE(value == null.get_input(key));
 }
