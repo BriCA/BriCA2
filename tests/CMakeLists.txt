@@ -1,7 +1,0 @@
-if (BRICA_TEST)
-  enable_testing()
-  include_directories(${gtest_SOURCE_DIR}/include)
-  add_executable(unit_tests assocvec.cpp component.cpp scheduler.cpp)
-  target_link_libraries(unit_tests gtest gtest_main)
-  add_test(NAME brica-test COMMAND unit_tests)
-endif()

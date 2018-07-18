@@ -1,6 +1,6 @@
 /******************************************************************************
  *
- * brica/component.hpp
+ * brica/mpi/component.hpp
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -21,51 +21,69 @@
  *
  *****************************************************************************/
 
-#ifndef __BRICA_KERNEL_COMPONENT_HPP__
-#define __BRICA_KERNEL_COMPONENT_HPP__
+#ifndef __KBRICA_MPI_COMPONENT_HPP__
+#define __KBRICA_MPI_COMPONENT_HPP__
 
-#include "brica/assocvec.hpp"
-#include "brica/buffer.hpp"
-#include "brica/functor.hpp"
+#include "brica/brica.hpp"
 
-#include <string>
-#include <utility>
+#include "mpi.h"
+
+#include <iostream>
 
 namespace brica {
-
-class IComponent {
- public:
-  virtual void make_in_port(std::string) = 0;
-  virtual void make_out_port(std::string) = 0;
-  virtual Buffer& get_input(std::string) = 0;
-  virtual Buffer& get_output(std::string) = 0;
-  virtual void collect() = 0;
-  virtual void execute() = 0;
-  virtual void expose() = 0;
-};
+namespace mpi {
 
 class Component : public IComponent {
- public:
-  class Port {
-   public:
+  struct Port {
+    void sync(int wanted, int actual) {
+      int size;
+      if (wanted == actual && target != wanted) {
+        size = buffer.size();
+        MPI_Send(&size, 1, MPI_INT, target, tag, MPI_COMM_WORLD);
+        if (size > 1) {
+          char* ptr = buffer.data();
+          MPI_Send(ptr, size, MPI_CHAR, target, tag, MPI_COMM_WORLD);
+        }
+      }
+
+      if (wanted != actual && target == actual) {
+        MPI_Recv(&size, 1, MPI_INT, wanted, tag, MPI_COMM_WORLD, &status);
+        buffer.resize(size);
+        if (size > 1) {
+          char* ptr = buffer.data();
+          MPI_Recv(ptr, size, MPI_CHAR, wanted, tag, MPI_COMM_WORLD, &status);
+        }
+      }
+    }
+
     void set(Buffer& value) { buffer = value; }
     const Buffer& get() const { return buffer; }
 
-   private:
     Buffer buffer;
+    int target;
+    int tag;
+
+    MPI_Status status;
   };
 
   using Ports = AssocVec<std::string, std::shared_ptr<Port>>;
 
-  Component(Functor f) : functor(f) {}
+ public:
+  Component(Functor f, int rank) : f(f), wanted(rank) {
+    MPI_Comm_rank(MPI_COMM_WORLD, &actual);
+  }
+
+  const Buffer& get_in_port_buffer(std::string name) {
+    return in_port.at(name)->get();
+  }
 
   void make_in_port(std::string name) {
     inputs.try_emplace(name, Buffer());
     in_port.try_emplace(name, std::make_shared<Port>());
   }
 
-  const Buffer& get_in_port_buffer(std::string name) {
-    return in_port.at(name)->get();
+  const Buffer& get_out_port_buffer(std::string name) {
+    return out_port.at(name)->get();
   }
 
   void make_out_port(std::string name) {
@@ -73,44 +91,48 @@ class Component : public IComponent {
     out_port.try_emplace(name, std::make_shared<Port>());
   }
 
-  const Buffer& get_out_port_buffer(std::string name) {
-    return out_port.at(name)->get();
-  }
-
   Buffer& get_input(std::string name) { return inputs.at(name); }
   Buffer& get_output(std::string name) { return outputs.at(name); }
 
   void connect(Component& target, std::string from, std::string to) {
     in_port[to] = target.out_port[from];
+    target.out_port[from]->target = wanted;
   }
 
   void collect() {
-    for (std::size_t i = 0; i < inputs.size(); ++i) {
-      inputs.index(i) = in_port.index(i)->get();
+    if (wanted == actual) {
+      for (std::size_t i = 0; i < inputs.size(); ++i) {
+        inputs.index(i) = in_port.index(i)->get();
+      }
     }
   }
 
-  void execute() { functor(inputs, outputs); }
+  void execute() {
+    if (wanted == actual) {
+      f(inputs, outputs);
+    }
+  }
 
   void expose() {
     for (std::size_t i = 0; i < outputs.size(); ++i) {
-      out_port.index(i)->set(outputs.index(i));
+      auto port = out_port.index(i);
+      port->set(outputs.index(i));
+      port->sync(wanted, actual);
     }
   }
 
  private:
-  Functor functor;
+  Functor f;
+  int wanted;
+  int actual;
+
   Dict inputs;
   Dict outputs;
   Ports in_port;
   Ports out_port;
 };
 
-template <class C>
-void connect(C& target, std::string from, C& origin, std::string to) {
-  origin.connect(target, from, to);
-}
-
+}  // namespace mpi
 }  // namespace brica
 
-#endif  // __BRICA_KERNEL_COMPONENT_HPP__
+#endif  // __KBRICA_MPI_COMPONENT_HPP__
