@@ -38,13 +38,7 @@ struct Timing {
   Time sleep;
 };
 
-class IScheduler {
- public:
-  virtual void add_component(IComponent* component, Timing timing) = 0;
-  virtual void step();
-};
-
-class VirtualTimeScheduler : public IScheduler {
+class VirtualTimeScheduler {
   struct Event {
     Time time;
     IComponent* component;

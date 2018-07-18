@@ -132,7 +132,7 @@ class Component : public IComponent {
   Ports out_port;
 };
 
-class VirtualTimeScheduler : public IScheduler {
+class VirtualTimeScheduler {
   struct Event {
     Time time;
     IComponent* component;
