@@ -28,14 +28,13 @@
 
 #include "mpi.h"
 
+#include <iostream>
+
 namespace brica {
 namespace mpi {
 
 class Component : public IComponent {
-  class Port {
-   public:
-    Port(int rank, int tag = 0) : target(rank), tag(tag) {}
-
+  struct Port {
     void sync(int wanted, int actual) {
       int size;
       if (wanted == actual && target != wanted) {
@@ -60,7 +59,6 @@ class Component : public IComponent {
     void set(Buffer& value) { buffer = value; }
     const Buffer& get() const { return buffer; }
 
-   private:
     Buffer buffer;
     int target;
     int tag;
@@ -75,14 +73,22 @@ class Component : public IComponent {
     MPI_Comm_rank(MPI_COMM_WORLD, &actual);
   }
 
+  const Buffer& get_in_port_buffer(std::string name) {
+    return in_port.at(name)->get();
+  }
+
   void make_in_port(std::string name) {
     inputs.try_emplace(name, Buffer());
-    in_port.try_emplace(name, std::make_shared<Port>(actual));
+    in_port.try_emplace(name, std::make_shared<Port>());
+  }
+
+  const Buffer& get_out_port_buffer(std::string name) {
+    return out_port.at(name)->get();
   }
 
   void make_out_port(std::string name) {
     outputs.try_emplace(name, Buffer());
-    out_port.try_emplace(name, std::make_shared<Port>(actual));
+    out_port.try_emplace(name, std::make_shared<Port>());
   }
 
   Buffer& get_input(std::string name) { return inputs.at(name); }
@@ -90,6 +96,7 @@ class Component : public IComponent {
 
   void connect(Component& target, std::string from, std::string to) {
     in_port[to] = target.out_port[from];
+    target.out_port[from]->target = wanted;
   }
 
   void collect() {
