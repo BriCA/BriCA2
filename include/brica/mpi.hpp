@@ -28,32 +28,32 @@
 
 #include "mpi.h"
 
-#include <iostream>
-
 namespace brica {
 namespace mpi {
 
 class Component : public IComponent {
   struct Port {
-    Port(int target) : target(target) {}
-
     void sync(int wanted, int actual) {
-      int size;
-      if (wanted == actual && target != wanted) {
-        size = buffer.size();
-        MPI_Send(&size, 1, MPI_INT, target, tag, MPI_COMM_WORLD);
-        if (size > 1) {
-          char* ptr = buffer.data();
-          MPI_Send(ptr, size, MPI_CHAR, target, tag, MPI_COMM_WORLD);
-        }
-      }
+      for (int i = 0; i < targets.size(); ++i) {
+        int target = targets[i];
+        int size;
 
-      if (wanted != actual && target == actual) {
-        MPI_Recv(&size, 1, MPI_INT, wanted, tag, MPI_COMM_WORLD, &status);
-        buffer.resize(size);
-        if (size > 1) {
-          char* ptr = buffer.data();
-          MPI_Recv(ptr, size, MPI_CHAR, wanted, tag, MPI_COMM_WORLD, &status);
+        if (wanted == actual && target != wanted) {
+          size = buffer.size();
+          MPI_Send(&size, 1, MPI_INT, target, tag, MPI_COMM_WORLD);
+          if (size > 1) {
+            char* ptr = buffer.data();
+            MPI_Send(ptr, size, MPI_CHAR, target, tag, MPI_COMM_WORLD);
+          }
+        }
+
+        if (wanted != actual && target == actual) {
+          MPI_Recv(&size, 1, MPI_INT, wanted, tag, MPI_COMM_WORLD, &status);
+          buffer.resize(size);
+          if (size > 1) {
+            char* ptr = buffer.data();
+            MPI_Recv(ptr, size, MPI_CHAR, wanted, tag, MPI_COMM_WORLD, &status);
+          }
         }
       }
     }
@@ -61,8 +61,14 @@ class Component : public IComponent {
     void set(Buffer& value) { buffer = value; }
     const Buffer& get() const { return buffer; }
 
+    void add_target(int rank) {
+      if (std::find(targets.begin(), targets.end(), rank) == targets.end()) {
+        targets.push_back(rank);
+      }
+    }
+
     Buffer buffer;
-    int target;
+    std::vector<int> targets;
     int tag;
 
     MPI_Status status;
@@ -81,7 +87,7 @@ class Component : public IComponent {
 
   void make_in_port(std::string name) {
     inputs.try_emplace(name, Buffer());
-    in_port.try_emplace(name, std::make_shared<Port>(wanted));
+    in_port.try_emplace(name, std::make_shared<Port>());
   }
 
   const Buffer& get_out_port_buffer(std::string name) {
@@ -90,7 +96,7 @@ class Component : public IComponent {
 
   void make_out_port(std::string name) {
     outputs.try_emplace(name, Buffer());
-    out_port.try_emplace(name, std::make_shared<Port>(wanted));
+    out_port.try_emplace(name, std::make_shared<Port>());
   }
 
   Buffer& get_input(std::string name) { return inputs.at(name); }
@@ -98,7 +104,7 @@ class Component : public IComponent {
 
   void connect(Component& target, std::string from, std::string to) {
     in_port[to] = target.out_port[from];
-    target.out_port[from]->target = wanted;
+    target.out_port[from]->add_target(wanted);
   }
 
   void collect() {

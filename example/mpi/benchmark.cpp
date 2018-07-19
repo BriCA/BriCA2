@@ -9,13 +9,7 @@
 
 using namespace std::chrono;
 
-int main(int argc, char* argv[]) {
-  MPI_Init(&argc, &argv);
-
-  int size, rank;
-  MPI_Comm_size(MPI_COMM_WORLD, &size);
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-
+void run(int size, int rank) {
   brica::Buffer payload(1000);
 
   std::random_device seed_gen;
@@ -51,6 +45,8 @@ int main(int argc, char* argv[]) {
     scheduler.add_component(components[i], timing);
   }
 
+  MPI_Barrier(MPI_COMM_WORLD);
+
   auto start = steady_clock::now();
 
   std::size_t i = 0;
@@ -66,12 +62,25 @@ int main(int argc, char* argv[]) {
 
   if (rank == 0) {
     std::cout
+        << size << " "
         << duration_cast<microseconds>(steady_clock::now() - start).count() / i
         << std::endl;
   }
 
   for (int i = 0; i < size; ++i) {
     delete components[i];
+  }
+}
+
+int main(int argc, char* argv[]) {
+  MPI_Init(&argc, &argv);
+
+  int size, rank;
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+  for (int i = 2; i <= size; i *= 2) {
+    run(i, rank);
   }
 
   MPI_Finalize();
