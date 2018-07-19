@@ -35,6 +35,7 @@ namespace brica {
 
 class IComponent {
  public:
+  virtual ~IComponent() {}
   virtual void make_in_port(std::string) = 0;
   virtual void make_out_port(std::string) = 0;
   virtual Buffer& get_input(std::string) = 0;
