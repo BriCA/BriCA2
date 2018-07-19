@@ -35,6 +35,8 @@ namespace mpi {
 
 class Component : public IComponent {
   struct Port {
+    Port(int target) : target(target) {}
+
     void sync(int wanted, int actual) {
       int size;
       if (wanted == actual && target != wanted) {
@@ -79,7 +81,7 @@ class Component : public IComponent {
 
   void make_in_port(std::string name) {
     inputs.try_emplace(name, Buffer());
-    in_port.try_emplace(name, std::make_shared<Port>());
+    in_port.try_emplace(name, std::make_shared<Port>(wanted));
   }
 
   const Buffer& get_out_port_buffer(std::string name) {
@@ -88,7 +90,7 @@ class Component : public IComponent {
 
   void make_out_port(std::string name) {
     outputs.try_emplace(name, Buffer());
-    out_port.try_emplace(name, std::make_shared<Port>());
+    out_port.try_emplace(name, std::make_shared<Port>(wanted));
   }
 
   Buffer& get_input(std::string name) { return inputs.at(name); }
