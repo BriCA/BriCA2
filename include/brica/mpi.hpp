@@ -28,11 +28,18 @@
 
 #include "mpi.h"
 
+#include <random>
+
 namespace brica {
 namespace mpi {
 
 class Component : public IComponent {
   struct Port {
+    static std::random_device r;
+    static std::mt19937 engine;
+
+    Port() : tag(static_cast<int>(engine())) {}
+
     void sync(int wanted, int actual) {
       for (int i = 0; i < targets.size(); ++i) {
         int target = targets[i];
@@ -56,8 +63,6 @@ class Component : public IComponent {
           }
         }
       }
-
-      MPI_Barrier(MPI_COMM_WORLD);
     }
 
     void set(Buffer& value) { buffer = value; }
@@ -126,7 +131,9 @@ class Component : public IComponent {
   void expose() {
     for (std::size_t i = 0; i < outputs.size(); ++i) {
       auto port = out_port.index(i);
-      port->set(outputs.index(i));
+      if (wanted == actual) {
+        port->set(outputs.index(i));
+      }
       port->sync(wanted, actual);
     }
   }
@@ -141,6 +148,8 @@ class Component : public IComponent {
   Ports in_port;
   Ports out_port;
 };
+
+std::mt19937 Component::Port::engine = std::mt19937(r);
 
 class VirtualTimeScheduler {
   struct Event {
