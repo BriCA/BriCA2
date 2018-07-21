@@ -10,6 +10,8 @@
 using namespace std::chrono;
 
 void run(int size, int rank) {
+  brica::mpi::init();
+
   brica::Buffer payload(1000);
 
   std::random_device seed_gen;

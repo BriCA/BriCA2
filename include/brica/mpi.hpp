@@ -33,11 +33,26 @@
 namespace brica {
 namespace mpi {
 
+static std::mt19937 engine;
+
+void init() {
+  int rank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+  unsigned int seed;
+
+  if (rank != 0) {
+    std::random_device device;
+    seed = device();
+  }
+
+  MPI_Bcast(&seed, 1, MPI_UNSIGNED, 0, MPI_COMM_WORLD);
+
+  engine = std::mt19937(seed);
+}
+
 class Component : public IComponent {
   struct Port {
-    static std::random_device device;
-    static std::mt19937 engine;
-
     Port() : tag(static_cast<int>(engine())) {}
 
     void sync(int wanted, int actual) {
@@ -148,9 +163,6 @@ class Component : public IComponent {
   Ports in_port;
   Ports out_port;
 };
-
-std::random_device Component::Port::device;
-std::mt19937 Component::Port::engine = std::mt19937(Component::Port::device());
 
 class VirtualTimeScheduler {
   struct Event {

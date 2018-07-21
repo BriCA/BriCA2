@@ -12,6 +12,8 @@ using namespace std::chrono;
 int main(int argc, char* argv[]) {
   MPI_Init(&argc, &argv);
 
+  brica::mpi::init();
+
   int size;
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
