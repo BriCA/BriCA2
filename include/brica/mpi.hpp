@@ -35,7 +35,7 @@ namespace mpi {
 
 class Component : public IComponent {
   struct Port {
-    static std::random_device r;
+    static std::random_device device;
     static std::mt19937 engine;
 
     Port() : tag(static_cast<int>(engine())) {}
@@ -149,7 +149,8 @@ class Component : public IComponent {
   Ports out_port;
 };
 
-std::mt19937 Component::Port::engine = std::mt19937(r);
+std::random_device Component::Port::device;
+std::mt19937 Component::Port::engine = std::mt19937(Component::Port::device());
 
 class VirtualTimeScheduler {
   struct Event {
