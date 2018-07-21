@@ -16,14 +16,22 @@ void run(int size, int rank) {
   std::mt19937 engine(seed_gen());
   std::normal_distribution<> distribution;
 
+  std::vector<double> presampled(1000 * 1000);
+
+  for (std::size_t i = 0; i < 1000 * 1000; ++i) {
+    presampled[i] = distribution(engine);
+  }
+
   brica::Functor f = [&](brica::Dict& inputs, brica::Dict& outputs) {
     auto start = steady_clock::now();
 
     double value = 0.0;
+    std::size_t i = 0;
     for (auto end = start;
          duration_cast<microseconds>(end - start).count() < 1000;
          end = steady_clock::now()) {
-      value += distribution(engine);
+      value += presampled[i % (1000 * 1000)];
+      ++i;
     }
 
     outputs["default"] = payload;
