@@ -56,6 +56,8 @@ class Component : public IComponent {
           }
         }
       }
+
+      MPI_Barrier(MPI_COMM_WORLD);
     }
 
     void set(Buffer& value) { buffer = value; }
