@@ -46,7 +46,7 @@ void run(int size, int rank) {
     components[i]->make_in_port("default");
     components[i]->make_out_port("default");
     if (i > 0) {
-      brica::connect(*components[i - 1], "default", *components[i], "default");
+      brica::connect(*components[i], "default", *components[i - 1], "default");
     }
 
     scheduler.add_component(components[i]);
@@ -90,8 +90,6 @@ int main(int argc, char* argv[]) {
     run(i, rank);
     MPI_Barrier(MPI_COMM_WORLD);
   }
-
-  std::cout << rank << " foo!" << std::endl;
 
   MPI_Finalize();
 }
