@@ -10,8 +10,6 @@
 using namespace std::chrono;
 
 void run(int size, int rank) {
-  brica::mpi::init();
-
   brica::Buffer payload(1000);
 
   std::random_device seed_gen;
@@ -41,8 +39,7 @@ void run(int size, int rank) {
 
   std::vector<brica::mpi::Component*> components(size);
 
-  brica::mpi::VirtualTimeScheduler scheduler;
-  brica::Timing timing{0, 1, 0};
+  brica::mpi::VirtualTimeSyncScheduler scheduler;
 
   for (int i = 0; i < size; ++i) {
     components[i] = new brica::mpi::Component(f, i);
@@ -52,7 +49,7 @@ void run(int size, int rank) {
       brica::connect(*components[i - 1], "default", *components[i], "default");
     }
 
-    scheduler.add_component(components[i], timing);
+    scheduler.add_component(components[i]);
   }
 
   MPI_Barrier(MPI_COMM_WORLD);
@@ -91,7 +88,10 @@ int main(int argc, char* argv[]) {
 
   for (int i = 2; i <= size; i *= 2) {
     run(i, rank);
+    MPI_Barrier(MPI_COMM_WORLD);
   }
+
+  std::cout << rank << " foo!" << std::endl;
 
   MPI_Finalize();
 }

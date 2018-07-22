@@ -33,27 +33,9 @@
 namespace brica {
 namespace mpi {
 
-static std::mt19937 engine;
-
-void init() {
-  int rank;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-
-  unsigned int seed;
-
-  if (rank != 0) {
-    std::random_device device;
-    seed = device();
-  }
-
-  MPI_Bcast(&seed, 1, MPI_UNSIGNED, 0, MPI_COMM_WORLD);
-
-  engine = std::mt19937(seed);
-}
-
 class Component : public IComponent {
   struct Port {
-    Port() : tag(static_cast<int>(engine())) {}
+    Port(int tag = 0) : tag(tag) {}
 
     void sync(int wanted, int actual) {
       for (int i = 0; i < targets.size(); ++i) {
@@ -118,7 +100,7 @@ class Component : public IComponent {
 
   void make_out_port(std::string name) {
     outputs.try_emplace(name, Buffer());
-    out_port.try_emplace(name, std::make_shared<Port>());
+    out_port.try_emplace(name, std::make_shared<Port>(out_port.size()));
   }
 
   Buffer& get_input(std::string name) { return inputs.at(name); }
@@ -162,6 +144,25 @@ class Component : public IComponent {
   Dict outputs;
   Ports in_port;
   Ports out_port;
+};
+
+class VirtualTimeSyncScheduler {
+ public:
+  void add_component(IComponent* component) { components.push_back(component); }
+
+  void step() {
+    for (std::size_t i = 0; i < components.size(); ++i) {
+      components[i]->collect();
+      components[i]->execute();
+    }
+
+    for (std::size_t i = 0; i < components.size(); ++i) {
+      components[i]->expose();
+    }
+  }
+
+ private:
+  std::vector<IComponent*> components;
 };
 
 class VirtualTimeScheduler {
@@ -216,8 +217,6 @@ class VirtualTimeScheduler {
       awake.front()->execute();
       awake.pop();
     }
-
-    MPI_Barrier(MPI_COMM_WORLD);
   }
 
  private:

@@ -12,8 +12,6 @@ using namespace std::chrono;
 int main(int argc, char* argv[]) {
   MPI_Init(&argc, &argv);
 
-  brica::mpi::init();
-
   int size;
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
@@ -38,7 +36,7 @@ int main(int argc, char* argv[]) {
 
   std::vector<brica::mpi::Component*> components(size);
 
-  brica::mpi::VirtualTimeScheduler scheduler;
+  brica::mpi::VirtualTimeSyncScheduler scheduler;
   brica::Timing timing{0, 1, 0};
 
   for (int i = 0; i < size; ++i) {
