@@ -28,8 +28,6 @@
 
 #include "mpi.h"
 
-#include <random>
-
 namespace brica {
 namespace mpi {
 
