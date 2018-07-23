@@ -154,9 +154,13 @@ class VirtualTimeSyncScheduler {
       components[i]->execute();
     }
 
+    MPI_Barrier(MPI_COMM_WORLD);
+
     for (std::size_t i = 0; i < components.size(); ++i) {
       components[i]->expose();
     }
+
+    MPI_Barrier(MPI_COMM_WORLD);
   }
 
  private:
