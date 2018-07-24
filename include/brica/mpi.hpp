@@ -33,28 +33,37 @@ namespace mpi {
 
 class Component : public IComponent {
   struct Port {
-    Port(int tag = 0) : tag(tag) {}
+    Port(MPI_Comm comm, int tag = 0)
+        : comm(comm), tag(tag), request(MPI_REQUEST_NULL) {}
 
-    void sync(int wanted, int actual) {
-      for (int i = 0; i < targets.size(); ++i) {
-        int target = targets[i];
-        int size;
+    ~Port() { MPI_Wait(&request, &status); }
 
-        if (wanted == actual && target != wanted) {
-          size = buffer.size();
-          MPI_Send(&size, 1, MPI_INT, target, tag, MPI_COMM_WORLD);
-          if (size > 1) {
-            char* ptr = buffer.data();
-            MPI_Send(ptr, size, MPI_CHAR, target, tag, MPI_COMM_WORLD);
+    void sync(int src, int actual) {
+      for (int i = 0; i < dests.size(); ++i) {
+        int dest = dests[i];
+        int size, flag = 1;
+
+        if (src == actual && dest != src) {
+          MPI_Test(&request, &flag, &status);
+          if (flag) {
+            size = buffer.size();
+            MPI_Send(&size, 1, MPI_INT, dest, tag, comm);
+            if (size > 1) {
+              char* ptr = buffer.data();
+              MPI_Isend(ptr, size, MPI_CHAR, dest, tag, comm, &request);
+            }
           }
         }
 
-        if (wanted != actual && target == actual) {
-          MPI_Recv(&size, 1, MPI_INT, wanted, tag, MPI_COMM_WORLD, &status);
-          buffer.resize(size);
-          if (size > 1) {
-            char* ptr = buffer.data();
-            MPI_Recv(ptr, size, MPI_CHAR, wanted, tag, MPI_COMM_WORLD, &status);
+        if (src != actual && dest == actual) {
+          MPI_Test(&request, &flag, &status);
+          if (flag) {
+            MPI_Recv(&size, 1, MPI_INT, src, tag, comm, &status);
+            buffer.resize(size);
+            if (size > 1) {
+              char* ptr = buffer.data();
+              MPI_Irecv(ptr, size, MPI_CHAR, src, tag, comm, &request);
+            }
           }
         }
       }
@@ -63,24 +72,29 @@ class Component : public IComponent {
     void set(Buffer& value) { buffer = value; }
     const Buffer& get() const { return buffer; }
 
-    void add_target(int rank) {
-      if (std::find(targets.begin(), targets.end(), rank) == targets.end()) {
-        targets.push_back(rank);
+    void add_dest(int rank) {
+      if (std::find(dests.begin(), dests.end(), rank) == dests.end()) {
+        dests.push_back(rank);
       }
     }
 
+   private:
     Buffer buffer;
-    std::vector<int> targets;
+    std::vector<int> dests;
+
+    MPI_Comm comm;
     int tag;
 
+    MPI_Request request;
     MPI_Status status;
   };
 
   using Ports = AssocVec<std::string, std::shared_ptr<Port>>;
 
  public:
-  Component(Functor f, int rank) : f(f), wanted(rank) {
-    MPI_Comm_rank(MPI_COMM_WORLD, &actual);
+  Component(Functor f, int rank, MPI_Comm comm = MPI_COMM_WORLD)
+      : f(f), wanted(rank), comm(comm) {
+    MPI_Comm_rank(comm, &actual);
   }
 
   const Buffer& get_in_port_buffer(std::string name) {
@@ -89,7 +103,7 @@ class Component : public IComponent {
 
   void make_in_port(std::string name) {
     inputs.try_emplace(name, Buffer());
-    in_port.try_emplace(name, std::make_shared<Port>());
+    in_port.try_emplace(name, std::make_shared<Port>(comm));
   }
 
   const Buffer& get_out_port_buffer(std::string name) {
@@ -98,7 +112,8 @@ class Component : public IComponent {
 
   void make_out_port(std::string name) {
     outputs.try_emplace(name, Buffer());
-    out_port.try_emplace(name, std::make_shared<Port>(out_port.size()));
+    int tag = out_port.size();
+    out_port.try_emplace(name, std::make_shared<Port>(comm, tag));
   }
 
   Buffer& get_input(std::string name) { return inputs.at(name); }
@@ -106,7 +121,7 @@ class Component : public IComponent {
 
   void connect(Component& target, std::string from, std::string to) {
     in_port[to] = target.out_port[from];
-    target.out_port[from]->add_target(wanted);
+    target.out_port[from]->add_dest(wanted);
   }
 
   void collect() {
@@ -137,6 +152,7 @@ class Component : public IComponent {
   Functor f;
   int wanted;
   int actual;
+  MPI_Comm comm;
 
   Dict inputs;
   Dict outputs;
@@ -146,6 +162,8 @@ class Component : public IComponent {
 
 class VirtualTimeSyncScheduler {
  public:
+  VirtualTimeSyncScheduler(MPI_Comm comm = MPI_COMM_WORLD) : comm(comm) {}
+
   void add_component(IComponent* component) { components.push_back(component); }
 
   void step() {
@@ -154,16 +172,16 @@ class VirtualTimeSyncScheduler {
       components[i]->execute();
     }
 
-    MPI_Barrier(MPI_COMM_WORLD);
-
     for (std::size_t i = 0; i < components.size(); ++i) {
       components[i]->expose();
     }
 
-    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Barrier(comm);
   }
 
  private:
+  MPI_Comm comm;
+
   std::vector<IComponent*> components;
 };
 
