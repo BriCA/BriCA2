@@ -24,7 +24,7 @@ class get_pybind_include(object):
 ext_modules = [
     Extension(
         'brica',
-        ['src/python/component.cpp'],
+        ['python/src/simple.cpp'],
         include_dirs=[
             # Path to pybind11 headers
             get_pybind_include(),

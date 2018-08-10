@@ -38,50 +38,39 @@ class IComponent {
   virtual ~IComponent() {}
   virtual void make_in_port(std::string) = 0;
   virtual void make_out_port(std::string) = 0;
-  virtual Buffer& get_input(std::string) = 0;
-  virtual Buffer& get_output(std::string) = 0;
   virtual void collect() = 0;
   virtual void execute() = 0;
   virtual void expose() = 0;
 };
 
-class Component : public IComponent {
+template <class T, class D, class F>
+class ComponentBase : public IComponent {
  public:
   class Port {
    public:
-    void set(Buffer& value) { buffer = value; }
-    const Buffer& get() const { return buffer; }
+    void set(T& value) { buffer = value; }
+    const T& get() const { return buffer; }
 
    private:
-    Buffer buffer;
+    T buffer;
   };
 
   using Ports = AssocVec<std::string, std::shared_ptr<Port>>;
 
-  Component(Functor f) : functor(f) {}
+  ComponentBase(F f) : functor(f) {}
+  virtual ~ComponentBase() {}
 
   void make_in_port(std::string name) {
-    inputs.try_emplace(name, Buffer());
+    inputs.try_emplace(name, T());
     in_port.try_emplace(name, std::make_shared<Port>());
   }
 
-  const Buffer& get_in_port_buffer(std::string name) {
-    return in_port.at(name)->get();
-  }
-
   void make_out_port(std::string name) {
-    outputs.try_emplace(name, Buffer());
+    outputs.try_emplace(name, T());
     out_port.try_emplace(name, std::make_shared<Port>());
   }
 
-  const Buffer& get_out_port_buffer(std::string name) {
-    return out_port.at(name)->get();
-  }
-
-  Buffer& get_input(std::string name) { return inputs.at(name); }
-  Buffer& get_output(std::string name) { return outputs.at(name); }
-
-  void connect(Component& target, std::string from, std::string to) {
+  void connect(ComponentBase& target, std::string from, std::string to) {
     in_port[to] = target.out_port[from];
   }
 
@@ -99,12 +88,30 @@ class Component : public IComponent {
     }
   }
 
- private:
-  Functor functor;
-  Dict inputs;
-  Dict outputs;
+ protected:
+  D inputs;
+  D outputs;
   Ports in_port;
   Ports out_port;
+
+ private:
+  F functor;
+};
+
+class Component : public ComponentBase<Buffer, Dict, Functor> {
+ public:
+  Component(Functor f) : ComponentBase<Buffer, Dict, Functor>(f) {}
+
+  const Buffer& get_in_port_value(std::string name) {
+    return in_port.at(name)->get();
+  }
+
+  const Buffer& get_out_port_value(std::string name) {
+    return out_port.at(name)->get();
+  }
+
+  Buffer& get_input(std::string name) { return inputs.at(name); }
+  Buffer& get_output(std::string name) { return outputs.at(name); }
 };
 
 template <class C>
