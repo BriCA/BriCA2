@@ -1,9 +1,81 @@
-from setuptools import setup, Extension
-from setuptools.command.build_ext import build_ext
-import sys
-import setuptools
+#!/usr/bin/env python
+# -*- coding:utf-8 -*-
 
-__version__ = '0.0.1'
+import io
+import os
+import sys
+from shutil import rmtree
+
+import setuptools
+from setuptools import find_packages, setup, Command, Extension
+from setuptools.command.build_ext import build_ext
+from distutils.command.install_headers import install_headers
+
+NAME = 'BriCA2'
+DESCRIPTION = 'BriCA Version 2 Python bindings'
+URL = 'https://github.com/BriCA/BriCA2'
+EMAIL = 'kotone@sfc.keio.ac.jp'
+AUTHOR = 'Kotone Itaya'
+REQUIRES_PYTHON = '>=3.6.0'
+VERSION = '0.0.6'
+
+headers = [
+    'include/brica/assocvec.hpp',
+    'include/brica/brica.hpp',
+    'include/brica/buffer.hpp',
+    'include/brica/component.hpp',
+    'include/brica/functor.hpp',
+    'include/brica/mpi.hpp',
+    'include/brica/scheduler.hpp',
+]
+
+here = os.path.abspath(os.path.dirname(__file__))
+
+# Import the README and use it as the long-description.
+# Note: this will only work if 'README.md' is present in your MANIFEST.in file!
+try:
+    with io.open(os.path.join(here, 'README.md'), encoding='utf-8') as f:
+        long_description = '\n' + f.read()
+except FileNotFoundError:
+    long_description = DESCRIPTION
+
+
+class UploadCommand(Command):
+    """Support setup.py upload."""
+
+    description = 'Build and publish the package.'
+    user_options = []
+
+    @staticmethod
+    def status(s):
+        """Prints things in bold."""
+        print('\033[1m{0}\033[0m'.format(s))
+
+    def initialize_options(self):
+        pass
+
+    def finalize_options(self):
+        pass
+
+    def run(self):
+        try:
+            self.status('Removing previous builds…')
+            rmtree(os.path.join(here, 'dist'))
+        except OSError:
+            pass
+
+        self.status('Building Source and Wheel (universal) distribution…')
+        os.system('{0} setup.py sdist bdist_wheel --universal'.format(
+            sys.executable))
+
+        self.status('Uploading the package to PyPI via Twine…')
+        os.system('twine upload dist/*')
+
+        self.status('Pushing git tags…')
+        os.system('git tag v{0}'.format(VERSION))
+        os.system('git push --tags')
+
+        sys.exit()
 
 
 class get_pybind_include(object):
@@ -32,8 +104,7 @@ ext_modules = [
             # Path to BriCA headers
             "./include",
         ],
-        language='c++'
-    ),
+        language='c++'),
 ]
 
 
@@ -81,26 +152,49 @@ class BuildExt(build_ext):
         ct = self.compiler.compiler_type
         opts = self.c_opts.get(ct, [])
         if ct == 'unix':
-            opts.append('-DVERSION_INFO="%s"' % self.distribution.get_version())
+            opts.append(
+                '-DVERSION_INFO="%s"' % self.distribution.get_version())
             opts.append(cpp_flag(self.compiler))
             if has_flag(self.compiler, '-fvisibility=hidden'):
                 opts.append('-fvisibility=hidden')
         elif ct == 'msvc':
-            opts.append('/DVERSION_INFO=\\"%s\\"' % self.distribution.get_version())
+            opts.append(
+                '/DVERSION_INFO=\\"%s\\"' % self.distribution.get_version())
         for ext in self.extensions:
             ext.extra_compile_args = opts
         build_ext.build_extensions(self)
 
+
+class InstallHeaders(install_headers):
+    def run(self):
+        for header in self.distribution.headers:
+            subdir = os.path.dirname(
+                os.path.relpath(header, 'include/brica'))
+            install_dir = os.path.join(self.install_dir, subdir)
+            self.mkpath(install_dir)
+
+            (out, _) = self.copy_file(header, install_dir)
+            self.outfiles.append(out)
+
+
 setup(
-    name='BriCA2',
-    version=__version__,
-    author='Kotone Itaya',
-    author_email='kotone@sfc.keio.ac.jp',
-    url='https://github.com/BriCA/BriCA2',
-    description='Python bindings for BriCA2',
-    long_description='',
+    name=NAME,
+    version=VERSION,
+    description=DESCRIPTION,
+    long_description=long_description,
+    long_descriptino_content_type='text/markdown',
+    author=AUTHOR,
+    author_email=EMAIL,
+    python_requires=REQUIRES_PYTHON,
+    url=URL,
     ext_modules=ext_modules,
     install_requires=['pybind11>=2.2'],
-    cmdclass={'build_ext': BuildExt},
+    license='Apache',
+    headers=headers,
+    cmdclass={
+        'build_ext': BuildExt,
+        'install_headers': InstallHeaders,
+        'upload': UploadCommand,
+    },
     zip_safe=False,
 )
