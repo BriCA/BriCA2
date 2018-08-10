@@ -31,56 +31,56 @@ TEST_CASE("emit/pipe/null component scheduling", "[scheduler]") {
   s.add_component(&null, t);
 
   CHECK(emit.get_output(key).empty());
-  CHECK(emit.get_out_port_buffer(key).empty());
+  CHECK(emit.get_out_port_value(key).empty());
 
   CHECK(pipe.get_input(key).empty());
-  CHECK(pipe.get_in_port_buffer(key).empty());
+  CHECK(pipe.get_in_port_value(key).empty());
 
   CHECK(pipe.get_output(key).empty());
-  CHECK(pipe.get_out_port_buffer(key).empty());
+  CHECK(pipe.get_out_port_value(key).empty());
 
   CHECK(null.get_input(key).empty());
-  CHECK(null.get_in_port_buffer(key).empty());
+  CHECK(null.get_in_port_value(key).empty());
 
   s.step();
 
   CHECK(value == emit.get_output(key));
-  CHECK(emit.get_out_port_buffer(key).empty());
+  CHECK(emit.get_out_port_value(key).empty());
 
   CHECK(pipe.get_input(key).empty());
-  CHECK(pipe.get_in_port_buffer(key).empty());
+  CHECK(pipe.get_in_port_value(key).empty());
 
   CHECK(pipe.get_output(key).empty());
-  CHECK(pipe.get_out_port_buffer(key).empty());
+  CHECK(pipe.get_out_port_value(key).empty());
 
   CHECK(null.get_input(key).empty());
-  CHECK(null.get_in_port_buffer(key).empty());
+  CHECK(null.get_in_port_value(key).empty());
 
   s.step();
 
   CHECK(value == emit.get_output(key));
-  CHECK(value == emit.get_out_port_buffer(key));
+  CHECK(value == emit.get_out_port_value(key));
 
   CHECK(value == pipe.get_input(key));
-  CHECK(value == pipe.get_in_port_buffer(key));
+  CHECK(value == pipe.get_in_port_value(key));
 
   CHECK(value == pipe.get_output(key));
-  CHECK(pipe.get_out_port_buffer(key).empty());
+  CHECK(pipe.get_out_port_value(key).empty());
 
   CHECK(null.get_input(key).empty());
-  CHECK(null.get_in_port_buffer(key).empty());
+  CHECK(null.get_in_port_value(key).empty());
 
   s.step();
 
   CHECK(value == emit.get_output(key));
-  CHECK(value == emit.get_out_port_buffer(key));
+  CHECK(value == emit.get_out_port_value(key));
 
   CHECK(value == pipe.get_input(key));
-  CHECK(value == pipe.get_in_port_buffer(key));
+  CHECK(value == pipe.get_in_port_value(key));
 
   CHECK(value == pipe.get_output(key));
-  CHECK(value == pipe.get_out_port_buffer(key));
+  CHECK(value == pipe.get_out_port_value(key));
 
   CHECK(value == null.get_input(key));
-  CHECK(value == null.get_in_port_buffer(key));
+  CHECK(value == null.get_in_port_value(key));
 }
