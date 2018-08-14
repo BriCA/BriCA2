@@ -55,19 +55,20 @@ class Component : public ComponentBase {
 py::none Component::None;
 
 PYBIND11_MODULE(brica, m) {
-  py::class_<brica::IComponent>(m, "IComponent");
+  py::class_<brica::IComponent>(m, "IComponent")
+      .def("make_in_port", &brica::IComponent::make_in_port)
+      .def("make_out_port", &brica::IComponent::make_out_port)
+      .def("collect", &brica::IComponent::collect)
+      .def("execute", &brica::IComponent::execute)
+      .def("expose", &brica::IComponent::expose);
+
   py::class_<ComponentBase, brica::IComponent>(m, "ComponentBase");
   py::class_<Component, ComponentBase>(m, "Component")
       .def(py::init<py::object>())
-      .def("make_in_port", &Component::make_in_port)
-      .def("make_out_port", &Component::make_out_port)
       .def("get_in_port_value", &Component::get_in_port_value)
       .def("get_out_port_value", &Component::get_out_port_value)
       .def("get_input", &Component::get_input)
-      .def("get_output", &Component::get_output)
-      .def("collect", &Component::collect)
-      .def("execute", &Component::execute)
-      .def("expose", &Component::expose);
+      .def("get_output", &Component::get_output);
 
   m.def("connect", &brica::connect<Component>);
 
