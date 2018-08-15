@@ -71,7 +71,7 @@ class ComponentBase : public IComponent {
   }
 
   void connect(ComponentBase& target, std::string from, std::string to) {
-    in_port[to] = target.out_port[from];
+    in_port.at(to) = target.out_port.at(from);
   }
 
   void collect() {

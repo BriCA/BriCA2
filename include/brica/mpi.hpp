@@ -120,8 +120,8 @@ class Component : public IComponent {
   Buffer& get_output(std::string name) { return outputs.at(name); }
 
   void connect(Component& target, std::string from, std::string to) {
-    in_port[to] = target.out_port[from];
-    target.out_port[from]->add_dest(wanted);
+    in_port.at(to) = target.out_port.at(from);
+    target.out_port.at(from)->add_dest(wanted);
   }
 
   void collect() {
