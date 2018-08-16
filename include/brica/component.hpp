@@ -36,8 +36,6 @@ namespace brica {
 class IComponent {
  public:
   virtual ~IComponent() {}
-  virtual void make_in_port(std::string) = 0;
-  virtual void make_out_port(std::string) = 0;
   virtual void collect() = 0;
   virtual void execute() = 0;
   virtual void expose() = 0;
@@ -60,29 +58,30 @@ class ComponentBase : public IComponent {
   ComponentBase(F f) : functor(f) {}
   virtual ~ComponentBase() {}
 
-  void make_in_port(std::string name) {
+  virtual void make_in_port(std::string name) {
     inputs.try_emplace(name, T());
     in_port.try_emplace(name, std::make_shared<Port>());
   }
 
-  void make_out_port(std::string name) {
+  virtual void make_out_port(std::string name) {
     outputs.try_emplace(name, T());
     out_port.try_emplace(name, std::make_shared<Port>());
   }
 
-  void connect(ComponentBase& target, std::string from, std::string to) {
+  virtual void connect(ComponentBase& target, std::string from,
+                       std::string to) {
     in_port.at(to) = target.out_port.at(from);
   }
 
-  void collect() {
+  virtual void collect() {
     for (std::size_t i = 0; i < inputs.size(); ++i) {
       inputs.index(i) = in_port.index(i)->get();
     }
   }
 
-  void execute() { functor(inputs, outputs); }
+  virtual void execute() { functor(inputs, outputs); }
 
-  void expose() {
+  virtual void expose() {
     for (std::size_t i = 0; i < outputs.size(); ++i) {
       out_port.index(i)->set(outputs.index(i));
     }
@@ -98,9 +97,10 @@ class ComponentBase : public IComponent {
   F functor;
 };
 
-class Component : public ComponentBase<Buffer, Dict, Functor> {
+class Component final : public ComponentBase<Buffer, Dict, Functor> {
  public:
   Component(Functor f) : ComponentBase<Buffer, Dict, Functor>(f) {}
+  ~Component() {}
 
   const Buffer& get_in_port_value(std::string name) {
     return in_port.at(name)->get();
