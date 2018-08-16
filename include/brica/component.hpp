@@ -27,6 +27,7 @@
 #include "brica/assocvec.hpp"
 #include "brica/buffer.hpp"
 #include "brica/functor.hpp"
+#include "brica/port.hpp"
 
 #include <string>
 #include <utility>
@@ -47,28 +48,17 @@ class ComponentBase : public IComponent {
   using F = std::function<void(D&, D&)>;
 
  public:
-  class Port {
-   public:
-    void set(T& value) { buffer = value; }
-    const T& get() const { return buffer; }
-
-   private:
-    T buffer;
-  };
-
-  using Ports = AssocVec<std::string, std::shared_ptr<Port>>;
-
   ComponentBase(F f) : functor(f) {}
   virtual ~ComponentBase() {}
 
   virtual void make_in_port(std::string name) {
     inputs.try_emplace(name, T());
-    in_port.try_emplace(name, std::make_shared<Port>());
+    in_port.try_emplace(name, std::make_shared<Port<T>>());
   }
 
   virtual void make_out_port(std::string name) {
     outputs.try_emplace(name, T());
-    out_port.try_emplace(name, std::make_shared<Port>());
+    out_port.try_emplace(name, std::make_shared<Port<T>>());
   }
 
   virtual void connect(ComponentBase& target, std::string from,
@@ -93,8 +83,8 @@ class ComponentBase : public IComponent {
  protected:
   D inputs;
   D outputs;
-  Ports in_port;
-  Ports out_port;
+  Ports<T> in_port;
+  Ports<T> out_port;
 
  private:
   F functor;

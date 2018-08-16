@@ -31,133 +31,70 @@
 namespace brica {
 namespace mpi {
 
-class Component : public IComponent {
-  struct Port {
-    Port(MPI_Comm comm, int tag = 0)
-        : comm(comm), tag(tag), request(MPI_REQUEST_NULL) {}
-
-    ~Port() { MPI_Wait(&request, &status); }
-
-    void sync(int src, int actual) {
-      for (int i = 0; i < dests.size(); ++i) {
-        int dest = dests[i];
-        int size, flag = 1;
-
-        if (src == actual && dest != src) {
-          MPI_Test(&request, &flag, &status);
-          if (flag) {
-            size = buffer.size();
-            MPI_Send(&size, 1, MPI_INT, dest, tag, comm);
-            if (size > 1) {
-              char* ptr = buffer.data();
-              MPI_Isend(ptr, size, MPI_CHAR, dest, tag, comm, &request);
-            }
-          }
-        }
-
-        if (src != actual && dest == actual) {
-          MPI_Test(&request, &flag, &status);
-          if (flag) {
-            MPI_Recv(&size, 1, MPI_INT, src, tag, comm, &status);
-            buffer.resize(size);
-            if (size > 1) {
-              char* ptr = buffer.data();
-              MPI_Irecv(ptr, size, MPI_CHAR, src, tag, comm, &request);
-            }
-          }
-        }
-      }
-    }
-
-    void set(Buffer& value) { buffer = value; }
-    const Buffer& get() const { return buffer; }
-
-    void add_dest(int rank) {
-      if (std::find(dests.begin(), dests.end(), rank) == dests.end()) {
-        dests.push_back(rank);
-      }
-    }
-
-   private:
-    Buffer buffer;
-    std::vector<int> dests;
-
-    MPI_Comm comm;
-    int tag;
-
-    MPI_Request request;
-    MPI_Status status;
-  };
-
-  using Ports = AssocVec<std::string, std::shared_ptr<Port>>;
-
+class Proxy final : public IComponent {
  public:
-  Component(Functor f, int rank, MPI_Comm comm = MPI_COMM_WORLD)
-      : f(f), wanted(rank), comm(comm) {
-    MPI_Comm_rank(comm, &actual);
+  Proxy(int src, int dest) : src(src), dest(dest) {
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   }
 
-  const Buffer& get_in_port_buffer(std::string name) {
-    return in_port.at(name)->get();
+  ~Proxy() {}
+
+ private:
+  int src;
+  int dest;
+  int rank;
+};
+
+class Component final : public IComponent {
+  friend Proxy;
+
+  Component(Functor f, int want = 0) : base(f), want(want) {
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   }
 
-  void make_in_port(std::string name) {
-    inputs.try_emplace(name, Buffer());
-    in_port.try_emplace(name, std::make_shared<Port>(comm));
+  ~Component() {}
+
+  void make_in_port(std::string name) { base.make_in_port(name); }
+
+  const Buffer& get_in_port_value(std::string name) {
+    return base.get_in_port_value(name);
   }
 
-  const Buffer& get_out_port_buffer(std::string name) {
-    return out_port.at(name)->get();
+  void make_out_port(std::string name) { base.make_out_port(name); }
+
+  const Buffer& get_out_port_value(std::string name) {
+    return base.get_out_port_value(name);
   }
 
-  void make_out_port(std::string name) {
-    outputs.try_emplace(name, Buffer());
-    int tag = out_port.size();
-    out_port.try_emplace(name, std::make_shared<Port>(comm, tag));
-  }
-
-  Buffer& get_input(std::string name) { return inputs.at(name); }
-  Buffer& get_output(std::string name) { return outputs.at(name); }
+  Buffer& get_input(std::string name) { return base.get_input(name); }
+  Buffer& get_output(std::string name) { return base.get_output(name); }
 
   void connect(Component& target, std::string from, std::string to) {
-    in_port.at(to) = target.out_port.at(from);
-    target.out_port.at(from)->add_dest(wanted);
+    base.connect(target.base, from, to);
   }
 
   void collect() {
-    if (wanted == actual) {
-      for (std::size_t i = 0; i < inputs.size(); ++i) {
-        inputs.index(i) = in_port.index(i)->get();
-      }
+    if (rank == want) {
+      base.collect();
     }
   }
 
   void execute() {
-    if (wanted == actual) {
-      f(inputs, outputs);
+    if (rank == want) {
+      base.execute();
     }
   }
 
   void expose() {
-    for (std::size_t i = 0; i < outputs.size(); ++i) {
-      auto port = out_port.index(i);
-      if (wanted == actual) {
-        port->set(outputs.index(i));
-      }
-      port->sync(wanted, actual);
+    if (rank == want) {
+      base.expose();
     }
   }
 
  private:
-  Functor f;
-  int wanted;
-  int actual;
-  MPI_Comm comm;
-
-  Dict inputs;
-  Dict outputs;
-  Ports in_port;
-  Ports out_port;
+  brica::Component base;
+  int want;
+  int rank;
 };
 
 class VirtualTimeSyncScheduler {
