@@ -41,8 +41,11 @@ class IComponent {
   virtual void expose() = 0;
 };
 
-template <class T, class D, class F>
+template <class T>
 class ComponentBase : public IComponent {
+  using D = AssocVec<std::string, T>;
+  using F = std::function<void(D&, D&)>;
+
  public:
   class Port {
    public:
@@ -97,9 +100,9 @@ class ComponentBase : public IComponent {
   F functor;
 };
 
-class Component final : public ComponentBase<Buffer, Dict, Functor> {
+class Component final : public ComponentBase<Buffer> {
  public:
-  Component(Functor f) : ComponentBase<Buffer, Dict, Functor>(f) {}
+  Component(Functor f) : ComponentBase<Buffer>(f) {}
   ~Component() {}
 
   const Buffer& get_in_port_value(std::string name) {

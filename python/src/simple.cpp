@@ -6,7 +6,7 @@ namespace py = pybind11;
 using Dict = brica::AssocVec<std::string, py::object>;
 using Functor = std::function<void(Dict&, Dict&)>;
 
-using ComponentBase = brica::ComponentBase<py::object, Dict, Functor>;
+using ComponentBase = brica::ComponentBase<py::object>;
 
 Functor wrap_function(py::object f) {
   return [f](Dict& inputs, Dict& outputs) {
