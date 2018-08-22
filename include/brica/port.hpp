@@ -11,7 +11,7 @@ template <class T>
 class Port {
  public:
   void set(T& value) { buffer = value; }
-  const T& get() const { return buffer; }
+  T& get() { return buffer; }
 
  private:
   T buffer;

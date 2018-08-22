@@ -31,23 +31,12 @@
 namespace brica {
 namespace mpi {
 
-class Proxy final : public IComponent {
- public:
-  Proxy(int src, int dest) : src(src), dest(dest) {
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  }
-
-  ~Proxy() {}
-
- private:
-  int src;
-  int dest;
-  int rank;
-};
+class Proxy;
 
 class Component final : public IComponent {
   friend Proxy;
 
+ public:
   Component(Functor f, int want = 0) : base(f), want(want) {
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   }
@@ -56,11 +45,19 @@ class Component final : public IComponent {
 
   void make_in_port(std::string name) { base.make_in_port(name); }
 
+  std::shared_ptr<Port<Buffer>> get_in_port(std::string name) {
+    return base.get_in_port(name);
+  }
+
   const Buffer& get_in_port_value(std::string name) {
     return base.get_in_port_value(name);
   }
 
   void make_out_port(std::string name) { base.make_out_port(name); }
+
+  std::shared_ptr<Port<Buffer>> get_out_port(std::string name) {
+    return base.get_out_port(name);
+  }
 
   const Buffer& get_out_port_value(std::string name) {
     return base.get_out_port_value(name);
@@ -95,6 +92,54 @@ class Component final : public IComponent {
   brica::Component base;
   int want;
   int rank;
+};
+
+class Proxy final : public IComponent {
+ public:
+  Proxy(Component& a, std::string out, Component& b, std::string in)
+      : origin(a.get_out_port(out)),
+        target(b.get_in_port(in)),
+        src(a.want),
+        dest(b.want) {
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  }
+  ~Proxy() {}
+
+  void collect() {
+    if (rank == src && rank == dest) {
+      target->set(origin->get());
+    } else {
+      if (rank == src) {
+        Buffer buffer = origin->get();
+        int count = buffer.size();
+        MPI_Send(&count, 1, MPI_INT, dest, 0, MPI_COMM_WORLD);
+        MPI_Send(buffer.data(), count, MPI_CHAR, dest, 0, MPI_COMM_WORLD);
+      }
+
+      if (rank == dest) {
+        int count;
+        MPI_Recv(&count, 1, MPI_INT, src, 0, MPI_COMM_WORLD, &status);
+        Buffer buffer(count);
+        MPI_Recv(buffer.data(), count, MPI_CHAR, src, 0, MPI_COMM_WORLD,
+                 &status);
+        target->set(buffer);
+      }
+    }
+  }
+
+  void execute() {}
+
+  void expose() {}
+
+ private:
+  std::shared_ptr<Port<Buffer>> origin;
+  std::shared_ptr<Port<Buffer>> target;
+
+  int src;
+  int dest;
+  int rank;
+
+  MPI_Status status;
 };
 
 class VirtualTimeSyncScheduler {

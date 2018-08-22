@@ -56,14 +56,21 @@ class ComponentBase : public IComponent {
     in_port.try_emplace(name, std::make_shared<Port<T>>());
   }
 
+  virtual std::shared_ptr<Port<T>> get_in_port(std::string name) {
+    return in_port.at(name);
+  }
+
   virtual void make_out_port(std::string name) {
     outputs.try_emplace(name, T());
     out_port.try_emplace(name, std::make_shared<Port<T>>());
   }
 
-  virtual void connect(ComponentBase& target, std::string from,
-                       std::string to) {
-    in_port.at(to) = target.out_port.at(from);
+  virtual std::shared_ptr<Port<T>> get_out_port(std::string name) {
+    return out_port.at(name);
+  }
+
+  virtual void connect(ComponentBase& target, std::string out, std::string in) {
+    in_port.at(in) = target.out_port.at(out);
   }
 
   virtual void collect() {
@@ -108,8 +115,8 @@ class Component final : public ComponentBase<Buffer> {
 };
 
 template <class C>
-void connect(C& target, std::string from, C& origin, std::string to) {
-  origin.connect(target, from, to);
+void connect(C& target, std::string out, C& origin, std::string in) {
+  origin.connect(target, out, in);
 }
 
 }  // namespace brica
