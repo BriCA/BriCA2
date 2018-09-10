@@ -20,7 +20,10 @@ TEST_CASE("two component chain", "[proxy]") {
   emit.make_out_port(key);
   null.make_in_port(key);
 
-  mpi::Proxy proxy(emit, key, null, key);
+  mpi::Proxy proxy(0, 1);
+
+  mpi::connect(emit, key, proxy);
+  mpi::connect(proxy, null, key);
 
   REQUIRE(emit.get_output(key).empty());
   REQUIRE(null.get_input(key).empty());
@@ -29,6 +32,9 @@ TEST_CASE("two component chain", "[proxy]") {
   emit.expose();
 
   proxy.collect();
+  proxy.execute();
+  proxy.expose();
+
   null.collect();
 
   MPI_Barrier(MPI_COMM_WORLD);

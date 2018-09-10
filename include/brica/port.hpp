@@ -17,8 +17,11 @@ class Port {
   T buffer;
 };
 
+template <typename T>
+using pPort = std::shared_ptr<Port<T>>;
+
 template <class T>
-using Ports = AssocVec<std::string, std::shared_ptr<Port<T>>>;
+using Ports = AssocVec<std::string, pPort<T>>;
 
 }  // namespace brica
 

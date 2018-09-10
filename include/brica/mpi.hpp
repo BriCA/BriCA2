@@ -33,197 +33,113 @@ namespace mpi {
 
 class Proxy;
 
-class Component final : public IComponent {
+class Component final : public ComponentBase<Buffer> {
   friend Proxy;
 
  public:
-  Component(Functor f, int want = 0) : base(f), want(want) {
+  Component(Functor f, int want) : ComponentBase<Buffer>(f), want(want) {
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   }
-
   ~Component() {}
 
-  void make_in_port(std::string name) { base.make_in_port(name); }
-
-  std::shared_ptr<Port<Buffer>> get_in_port(std::string name) {
-    return base.get_in_port(name);
-  }
-
-  const Buffer& get_in_port_value(std::string name) {
-    return base.get_in_port_value(name);
-  }
-
-  void make_out_port(std::string name) { base.make_out_port(name); }
-
-  std::shared_ptr<Port<Buffer>> get_out_port(std::string name) {
-    return base.get_out_port(name);
-  }
-
-  const Buffer& get_out_port_value(std::string name) {
-    return base.get_out_port_value(name);
-  }
-
-  Buffer& get_input(std::string name) { return base.get_input(name); }
-  Buffer& get_output(std::string name) { return base.get_output(name); }
-
-  void connect(Component& target, std::string from, std::string to) {
-    base.connect(target.base, from, to);
-  }
-
   void collect() {
-    if (rank == want) {
-      base.collect();
+    if (want == rank) {
+      ComponentBase<Buffer>::collect();
     }
   }
 
   void execute() {
-    if (rank == want) {
-      base.execute();
+    if (want == rank) {
+      ComponentBase<Buffer>::execute();
     }
   }
 
   void expose() {
-    if (rank == want) {
-      base.expose();
+    if (want == rank) {
+      ComponentBase<Buffer>::expose();
     }
   }
 
+  const Buffer& get_in_port_value(std::string name) {
+    return in_ports.at(name)->get();
+  }
+
+  const Buffer& get_out_port_value(std::string name) {
+    return out_ports.at(name)->get();
+  }
+
+  Buffer& get_input(std::string name) { return inputs.at(name); }
+  Buffer& get_output(std::string name) { return outputs.at(name); }
+
  private:
-  brica::Component base;
   int want;
   int rank;
 };
 
 class Proxy final : public IComponent {
  public:
-  Proxy(Component& a, std::string out, Component& b, std::string in)
-      : origin(a.get_out_port(out)),
-        target(b.get_in_port(in)),
-        src(a.want),
-        dest(b.want) {
+  Proxy(int src, int dest) : src(src), dest(dest) {
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   }
   ~Proxy() {}
 
   void collect() {
-    if (rank == src && rank == dest) {
-      target->set(origin->get());
-    } else {
-      if (rank == src) {
-        Buffer buffer = origin->get();
-        int count = buffer.size();
-        MPI_Send(&count, 1, MPI_INT, dest, 0, MPI_COMM_WORLD);
-        MPI_Send(buffer.data(), count, MPI_CHAR, dest, 0, MPI_COMM_WORLD);
-      }
-
-      if (rank == dest) {
-        int count;
-        MPI_Recv(&count, 1, MPI_INT, src, 0, MPI_COMM_WORLD, &status);
-        Buffer buffer(count);
-        MPI_Recv(buffer.data(), count, MPI_CHAR, src, 0, MPI_COMM_WORLD,
-                 &status);
-        target->set(buffer);
-      }
+    if (rank == src) {
+      buffer = in_port->get();
     }
   }
 
-  void execute() {}
+  void execute() {
+    if (rank == src) {
+      int size = buffer.size();
+      MPI_Send(&size, 1, MPI_INT, dest, 0, MPI_COMM_WORLD);
+      MPI_Send(buffer.data(), size, MPI_CHAR, dest, 0, MPI_COMM_WORLD);
+    }
 
-  void expose() {}
+    if (rank == dest) {
+      int size;
+      MPI_Recv(&size, 1, MPI_INT, src, 0, MPI_COMM_WORLD, &status);
+      buffer.resize(size);
+      MPI_Recv(buffer.data(), size, MPI_CHAR, src, 0, MPI_COMM_WORLD, &status);
+    }
+  }
+
+  void expose() {
+    if (rank == dest) {
+      out_port->set(buffer);
+    }
+  }
+
+  void connect_from(Component source, std::string from) {
+    in_port = source.out_ports.at(from);
+  }
+
+  void connect_to(Component target, std::string to) {
+    target.in_ports.at(to) = out_port;
+  }
+
+  friend void connect(Component source, std::string from, Proxy target);
+  friend void connect(Proxy source, Component target, std::string to);
 
  private:
-  std::shared_ptr<Port<Buffer>> origin;
-  std::shared_ptr<Port<Buffer>> target;
-
   int src;
   int dest;
   int rank;
-
   MPI_Status status;
+
+  pPort<Buffer> in_port;
+  pPort<Buffer> out_port;
+
+  Buffer buffer;
 };
 
-class VirtualTimeSyncScheduler {
- public:
-  VirtualTimeSyncScheduler(MPI_Comm comm = MPI_COMM_WORLD) : comm(comm) {}
+void connect(Component source, std::string from, Proxy target) {
+  target.connect_from(source, from);
+}
 
-  void add_component(IComponent* component) { components.push_back(component); }
-
-  void step() {
-    for (std::size_t i = 0; i < components.size(); ++i) {
-      components[i]->collect();
-      components[i]->execute();
-    }
-
-    for (std::size_t i = 0; i < components.size(); ++i) {
-      components[i]->expose();
-    }
-
-    MPI_Barrier(comm);
-  }
-
- private:
-  MPI_Comm comm;
-
-  std::vector<IComponent*> components;
-};
-
-class VirtualTimeScheduler {
-  struct Event {
-    Time time;
-    IComponent* component;
-    Timing timing;
-    bool sleep;
-
-    bool operator<(const Event& rhs) const { return time > rhs.time; }
-  };
-
- public:
-  void add_component(IComponent* component, Timing timing) {
-    event_queue.push({timing.offset, component, timing, false});
-  }
-
-  void step() {
-    Time time = event_queue.top().time;
-
-    std::queue<IComponent*> awake;
-    std::queue<IComponent*> asleep;
-
-    while (event_queue.top().time == time) {
-      Event event = event_queue.top();
-      event_queue.pop();
-
-      Event next = event;
-
-      if (event.sleep) {
-        asleep.push(event.component);
-        next.time += next.timing.sleep;
-        next.sleep = false;
-      } else {
-        awake.push(event.component);
-        next.time += next.timing.interval;
-        next.sleep = true;
-      }
-
-      event_queue.push(next);
-    }
-
-    while (!asleep.empty()) {
-      asleep.front()->expose();
-      asleep.pop();
-    }
-
-    MPI_Barrier(MPI_COMM_WORLD);
-
-    while (!awake.empty()) {
-      awake.front()->collect();
-      awake.front()->execute();
-      awake.pop();
-    }
-  }
-
- private:
-  std::priority_queue<Event> event_queue;
-};
+void connect(Proxy source, Component target, std::string to) {
+  source.connect_to(target, to);
+}
 
 }  // namespace mpi
 }  // namespace brica

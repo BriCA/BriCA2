@@ -26,7 +26,9 @@
 
 #include "brica/component.hpp"
 
+#include <functional>
 #include <queue>
+#include <vector>
 
 namespace brica {
 
@@ -40,6 +42,40 @@ struct Timing {
   Time sleep;
 };
 
+static const std::function<void()> nop([]() {});
+
+class VirtualTimePhasedScheduler {
+ public:
+  VirtualTimePhasedScheduler(std::function<void()> f = nop) : synchronize(f) {}
+
+  void add_component(IComponent* component, std::size_t phase) {
+    if (phase >= phases.size()) {
+      phases.resize(phase + 1);
+    }
+
+    phases[phase].push_back(component);
+  }
+
+  void step() {
+    for (std::size_t i = 0; i < phases.size(); ++i) {
+      for (std::size_t j = 0; j < phases[i].size(); ++j) {
+        phases[i][j]->collect();
+        phases[i][j]->execute();
+      }
+      synchronize();
+
+      for (std::size_t j = 0; j < phases[i].size(); ++j) {
+        phases[i][j]->expose();
+      }
+      synchronize();
+    }
+  }
+
+ private:
+  std::vector<std::vector<IComponent*>> phases;
+  std::function<void()> synchronize;
+};
+
 class VirtualTimeScheduler {
   struct Event {
     Time time;
@@ -51,6 +87,8 @@ class VirtualTimeScheduler {
   };
 
  public:
+  VirtualTimeScheduler(std::function<void()> f = nop) : synchronize(f) {}
+
   void add_component(IComponent* component, Timing timing) {
     event_queue.push({timing.offset, component, timing, false});
   }
@@ -84,16 +122,19 @@ class VirtualTimeScheduler {
       asleep.front()->expose();
       asleep.pop();
     }
+    synchronize();
 
     while (!awake.empty()) {
       awake.front()->collect();
       awake.front()->execute();
       awake.pop();
     }
+    synchronize();
   }
 
  private:
   std::priority_queue<Event> event_queue;
+  std::function<void()> synchronize;
 };
 
 }  // namespace brica

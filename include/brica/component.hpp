@@ -53,29 +53,29 @@ class ComponentBase : public IComponent {
 
   virtual void make_in_port(std::string name) {
     inputs.try_emplace(name, T());
-    in_port.try_emplace(name, std::make_shared<Port<T>>());
+    in_ports.try_emplace(name, std::make_shared<Port<T>>());
   }
 
   virtual std::shared_ptr<Port<T>> get_in_port(std::string name) {
-    return in_port.at(name);
+    return in_ports.at(name);
   }
 
   virtual void make_out_port(std::string name) {
     outputs.try_emplace(name, T());
-    out_port.try_emplace(name, std::make_shared<Port<T>>());
+    out_ports.try_emplace(name, std::make_shared<Port<T>>());
   }
 
   virtual std::shared_ptr<Port<T>> get_out_port(std::string name) {
-    return out_port.at(name);
+    return out_ports.at(name);
   }
 
   virtual void connect(ComponentBase& target, std::string out, std::string in) {
-    in_port.at(in) = target.out_port.at(out);
+    in_ports.at(in) = target.out_ports.at(out);
   }
 
   virtual void collect() {
     for (std::size_t i = 0; i < inputs.size(); ++i) {
-      inputs.index(i) = in_port.index(i)->get();
+      inputs.index(i) = in_ports.index(i)->get();
     }
   }
 
@@ -83,15 +83,15 @@ class ComponentBase : public IComponent {
 
   virtual void expose() {
     for (std::size_t i = 0; i < outputs.size(); ++i) {
-      out_port.index(i)->set(outputs.index(i));
+      out_ports.index(i)->set(outputs.index(i));
     }
   }
 
  protected:
   D inputs;
   D outputs;
-  Ports<T> in_port;
-  Ports<T> out_port;
+  Ports<T> in_ports;
+  Ports<T> out_ports;
 
  private:
   F functor;
@@ -103,11 +103,11 @@ class Component final : public ComponentBase<Buffer> {
   ~Component() {}
 
   const Buffer& get_in_port_value(std::string name) {
-    return in_port.at(name)->get();
+    return in_ports.at(name)->get();
   }
 
   const Buffer& get_out_port_value(std::string name) {
-    return out_port.at(name)->get();
+    return out_ports.at(name)->get();
   }
 
   Buffer& get_input(std::string name) { return inputs.at(name); }
