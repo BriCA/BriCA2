@@ -28,6 +28,8 @@
 
 #include "mpi.h"
 
+#include <iostream>
+
 namespace brica {
 namespace mpi {
 
@@ -78,10 +80,18 @@ class Component final : public ComponentBase<Buffer> {
 
 class Proxy final : public IComponent {
  public:
-  Proxy(int src, int dest) : src(src), dest(dest) {
+  Proxy(int src, int dest)
+      : src(src),
+        dest(dest),
+        in_port(std::make_shared<Port<Buffer>>()),
+        out_port(std::make_shared<Port<Buffer>>()) {
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   }
   ~Proxy() {}
+
+  Buffer get_input() { return in_port->get(); }
+  Buffer get_buffer() { return buffer; }
+  Buffer get_output() { return out_port->get(); }
 
   void collect() {
     if (rank == src) {
@@ -127,8 +137,8 @@ class Proxy final : public IComponent {
   int rank;
   MPI_Status status;
 
-  pPort<Buffer> in_port;
-  pPort<Buffer> out_port;
+  std::shared_ptr<Port<Buffer>> in_port;
+  std::shared_ptr<Port<Buffer>> out_port;
 
   Buffer buffer;
 };

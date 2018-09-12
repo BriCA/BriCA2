@@ -26,6 +26,9 @@ TEST_CASE("two component chain", "[proxy]") {
   mpi::connect(proxy, null, key);
 
   REQUIRE(emit.get_output(key).empty());
+  REQUIRE(proxy.get_input().empty());
+  REQUIRE(proxy.get_buffer().empty());
+  REQUIRE(proxy.get_output().empty());
   REQUIRE(null.get_input(key).empty());
 
   emit.execute();
@@ -40,6 +43,8 @@ TEST_CASE("two component chain", "[proxy]") {
   MPI_Barrier(MPI_COMM_WORLD);
 
   if (rank == 0) REQUIRE(value == emit.get_output(key));
+  if (rank == 0) REQUIRE(value == proxy.get_input());
+  if (rank == 1) REQUIRE(value == proxy.get_output());
   if (rank == 1) REQUIRE(value == null.get_input(key));
 }
 
