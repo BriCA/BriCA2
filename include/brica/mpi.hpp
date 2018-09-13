@@ -31,217 +31,175 @@
 namespace brica {
 namespace mpi {
 
-class Component : public IComponent {
-  struct Port {
-    Port(MPI_Comm comm, int tag = 0)
-        : comm(comm), tag(tag), request(MPI_REQUEST_NULL) {}
-
-    ~Port() { MPI_Wait(&request, &status); }
-
-    void sync(int src, int actual) {
-      for (int i = 0; i < dests.size(); ++i) {
-        int dest = dests[i];
-        int size, flag = 1;
-
-        if (src == actual && dest != src) {
-          MPI_Test(&request, &flag, &status);
-          if (flag) {
-            size = buffer.size();
-            MPI_Send(&size, 1, MPI_INT, dest, tag, comm);
-            if (size > 1) {
-              char* ptr = buffer.data();
-              MPI_Isend(ptr, size, MPI_CHAR, dest, tag, comm, &request);
-            }
-          }
-        }
-
-        if (src != actual && dest == actual) {
-          MPI_Test(&request, &flag, &status);
-          if (flag) {
-            MPI_Recv(&size, 1, MPI_INT, src, tag, comm, &status);
-            buffer.resize(size);
-            if (size > 1) {
-              char* ptr = buffer.data();
-              MPI_Irecv(ptr, size, MPI_CHAR, src, tag, comm, &request);
-            }
-          }
-        }
-      }
-    }
-
-    void set(Buffer& value) { buffer = value; }
-    const Buffer& get() const { return buffer; }
-
-    void add_dest(int rank) {
-      if (std::find(dests.begin(), dests.end(), rank) == dests.end()) {
-        dests.push_back(rank);
-      }
-    }
-
-   private:
-    Buffer buffer;
-    std::vector<int> dests;
-
-    MPI_Comm comm;
-    int tag;
-
-    MPI_Request request;
-    MPI_Status status;
-  };
-
-  using Ports = AssocVec<std::string, std::shared_ptr<Port>>;
-
+class Component final : public ComponentBase<Buffer> {
  public:
-  Component(Functor f, int rank, MPI_Comm comm = MPI_COMM_WORLD)
-      : f(f), wanted(rank), comm(comm) {
-    MPI_Comm_rank(comm, &actual);
+  Component(Functor f, int want) : ComponentBase<Buffer>(f), want(want) {
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  }
+  ~Component() {}
+
+  void collect() {
+    if (want == rank) {
+      ComponentBase<Buffer>::collect();
+    }
   }
 
-  const Buffer& get_in_port_buffer(std::string name) {
-    return in_port.at(name)->get();
+  void execute() {
+    if (want == rank) {
+      ComponentBase<Buffer>::execute();
+    }
   }
 
-  void make_in_port(std::string name) {
-    inputs.try_emplace(name, Buffer());
-    in_port.try_emplace(name, std::make_shared<Port>(comm));
+  void expose() {
+    if (want == rank) {
+      ComponentBase<Buffer>::expose();
+    }
   }
 
-  const Buffer& get_out_port_buffer(std::string name) {
-    return out_port.at(name)->get();
+  const Buffer& get_in_port_value(std::string name) {
+    return in_ports.at(name)->get();
   }
 
-  void make_out_port(std::string name) {
-    outputs.try_emplace(name, Buffer());
-    int tag = out_port.size();
-    out_port.try_emplace(name, std::make_shared<Port>(comm, tag));
+  const Buffer& get_out_port_value(std::string name) {
+    return out_ports.at(name)->get();
   }
 
   Buffer& get_input(std::string name) { return inputs.at(name); }
   Buffer& get_output(std::string name) { return outputs.at(name); }
 
-  void connect(Component& target, std::string from, std::string to) {
-    in_port.at(to) = target.out_port.at(from);
-    target.out_port.at(from)->add_dest(wanted);
+ private:
+  int want;
+  int rank;
+};
+
+class Proxy final : public IComponent {
+ public:
+  Proxy(int src, int dest)
+      : src(src),
+        dest(dest),
+        in_port(std::make_shared<Port<Buffer>>()),
+        out_port(std::make_shared<Port<Buffer>>()) {
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   }
+  ~Proxy() {}
+
+  Buffer get_input() { return in_port->get(); }
+  Buffer get_buffer() { return buffer; }
+  Buffer get_output() { return out_port->get(); }
+
+  std::shared_ptr<Port<Buffer>>& get_in_port() { return in_port; }
+  std::shared_ptr<Port<Buffer>>& get_out_port() { return out_port; }
 
   void collect() {
-    if (wanted == actual) {
-      for (std::size_t i = 0; i < inputs.size(); ++i) {
-        inputs.index(i) = in_port.index(i)->get();
-      }
+    if (rank == src) {
+      buffer = in_port->get();
     }
   }
 
   void execute() {
-    if (wanted == actual) {
-      f(inputs, outputs);
+    if (rank == src) {
+      int size = buffer.size();
+      MPI_Send(&size, 1, MPI_INT, dest, 0, MPI_COMM_WORLD);
+      MPI_Send(buffer.data(), size, MPI_CHAR, dest, 0, MPI_COMM_WORLD);
+    }
+
+    if (rank == dest) {
+      int size;
+      MPI_Recv(&size, 1, MPI_INT, src, 0, MPI_COMM_WORLD, &status);
+      buffer.resize(size);
+      MPI_Recv(buffer.data(), size, MPI_CHAR, src, 0, MPI_COMM_WORLD, &status);
     }
   }
 
   void expose() {
-    for (std::size_t i = 0; i < outputs.size(); ++i) {
-      auto port = out_port.index(i);
-      if (wanted == actual) {
-        port->set(outputs.index(i));
-      }
-      port->sync(wanted, actual);
+    if (rank == dest) {
+      out_port->set(buffer);
     }
   }
 
- private:
-  Functor f;
-  int wanted;
-  int actual;
-  MPI_Comm comm;
+  void connect_from(Component& source, std::string from) {
+    in_port = source.get_out_port(from);
+  }
 
-  Dict inputs;
-  Dict outputs;
-  Ports in_port;
-  Ports out_port;
+  void connect_to(Component& target, std::string to) {
+    target.get_in_port(to) = out_port;
+  }
+
+ private:
+  int src;
+  int dest;
+  int rank;
+  MPI_Status status;
+
+  std::shared_ptr<Port<Buffer>> in_port;
+  std::shared_ptr<Port<Buffer>> out_port;
+
+  Buffer buffer;
 };
 
-class VirtualTimeSyncScheduler {
+class Broadcast final : public IComponent {
  public:
-  VirtualTimeSyncScheduler(MPI_Comm comm = MPI_COMM_WORLD) : comm(comm) {}
+  Broadcast(int root)
+      : root(root),
+        in_port(std::make_shared<Port<Buffer>>()),
+        out_port(std::make_shared<Port<Buffer>>()) {
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  }
+  ~Broadcast() {}
 
-  void add_component(IComponent* component) { components.push_back(component); }
+  Buffer get_input() { return in_port->get(); }
+  Buffer get_buffer() { return buffer; }
+  Buffer get_output() { return out_port->get(); }
 
-  void step() {
-    for (std::size_t i = 0; i < components.size(); ++i) {
-      components[i]->collect();
-      components[i]->execute();
+  std::shared_ptr<Port<Buffer>>& get_in_port() { return in_port; }
+  std::shared_ptr<Port<Buffer>>& get_out_port() { return out_port; }
+
+  void collect() {
+    if (rank == root) {
+      buffer = in_port->get();
+    }
+  }
+
+  void execute() {
+    int size = buffer.size();
+    MPI_Bcast(&size, 1, MPI_INT, root, MPI_COMM_WORLD);
+
+    if (rank != root) {
+      buffer.resize(size);
     }
 
-    for (std::size_t i = 0; i < components.size(); ++i) {
-      components[i]->expose();
-    }
+    MPI_Bcast(buffer.data(), buffer.size(), MPI_CHAR, root, MPI_COMM_WORLD);
+  }
 
-    MPI_Barrier(comm);
+  void expose() { out_port->set(buffer); }
+
+  void connect_from(Component& source, std::string from) {
+    in_port = source.get_out_port(from);
+  }
+
+  void connect_to(Component& target, std::string to) {
+    target.get_in_port(to) = out_port;
   }
 
  private:
-  MPI_Comm comm;
+  int root;
+  int rank;
 
-  std::vector<IComponent*> components;
+  std::shared_ptr<Port<Buffer>> in_port;
+  std::shared_ptr<Port<Buffer>> out_port;
+
+  Buffer buffer;
 };
 
-class VirtualTimeScheduler {
-  struct Event {
-    Time time;
-    IComponent* component;
-    Timing timing;
-    bool sleep;
+template <class P>
+void connect(Component& source, std::string from, P& target) {
+  target.connect_from(source, from);
+}
 
-    bool operator<(const Event& rhs) const { return time > rhs.time; }
-  };
-
- public:
-  void add_component(IComponent* component, Timing timing) {
-    event_queue.push({timing.offset, component, timing, false});
-  }
-
-  void step() {
-    Time time = event_queue.top().time;
-
-    std::queue<IComponent*> awake;
-    std::queue<IComponent*> asleep;
-
-    while (event_queue.top().time == time) {
-      Event event = event_queue.top();
-      event_queue.pop();
-
-      Event next = event;
-
-      if (event.sleep) {
-        asleep.push(event.component);
-        next.time += next.timing.sleep;
-        next.sleep = false;
-      } else {
-        awake.push(event.component);
-        next.time += next.timing.interval;
-        next.sleep = true;
-      }
-
-      event_queue.push(next);
-    }
-
-    while (!asleep.empty()) {
-      asleep.front()->expose();
-      asleep.pop();
-    }
-
-    MPI_Barrier(MPI_COMM_WORLD);
-
-    while (!awake.empty()) {
-      awake.front()->collect();
-      awake.front()->execute();
-      awake.pop();
-    }
-  }
-
- private:
-  std::priority_queue<Event> event_queue;
-};
+template <class P>
+void connect(P& source, Component& target, std::string to) {
+  source.connect_to(target, to);
+}
 
 }  // namespace mpi
 }  // namespace brica

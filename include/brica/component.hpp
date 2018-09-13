@@ -27,6 +27,7 @@
 #include "brica/assocvec.hpp"
 #include "brica/buffer.hpp"
 #include "brica/functor.hpp"
+#include "brica/port.hpp"
 
 #include <string>
 #include <utility>
@@ -47,38 +48,34 @@ class ComponentBase : public IComponent {
   using F = std::function<void(D&, D&)>;
 
  public:
-  class Port {
-   public:
-    void set(T& value) { buffer = value; }
-    const T& get() const { return buffer; }
-
-   private:
-    T buffer;
-  };
-
-  using Ports = AssocVec<std::string, std::shared_ptr<Port>>;
-
   ComponentBase(F f) : functor(f) {}
   virtual ~ComponentBase() {}
 
   virtual void make_in_port(std::string name) {
     inputs.try_emplace(name, T());
-    in_port.try_emplace(name, std::make_shared<Port>());
+    in_ports.try_emplace(name, std::make_shared<Port<T>>());
+  }
+
+  virtual std::shared_ptr<Port<T>>& get_in_port(std::string name) {
+    return in_ports.at(name);
   }
 
   virtual void make_out_port(std::string name) {
     outputs.try_emplace(name, T());
-    out_port.try_emplace(name, std::make_shared<Port>());
+    out_ports.try_emplace(name, std::make_shared<Port<T>>());
   }
 
-  virtual void connect(ComponentBase& target, std::string from,
-                       std::string to) {
-    in_port.at(to) = target.out_port.at(from);
+  virtual std::shared_ptr<Port<T>>& get_out_port(std::string name) {
+    return out_ports.at(name);
+  }
+
+  virtual void connect(ComponentBase& target, std::string out, std::string in) {
+    in_ports.at(in) = target.out_ports.at(out);
   }
 
   virtual void collect() {
     for (std::size_t i = 0; i < inputs.size(); ++i) {
-      inputs.index(i) = in_port.index(i)->get();
+      inputs.index(i) = in_ports.index(i)->get();
     }
   }
 
@@ -86,15 +83,15 @@ class ComponentBase : public IComponent {
 
   virtual void expose() {
     for (std::size_t i = 0; i < outputs.size(); ++i) {
-      out_port.index(i)->set(outputs.index(i));
+      out_ports.index(i)->set(outputs.index(i));
     }
   }
 
  protected:
   D inputs;
   D outputs;
-  Ports in_port;
-  Ports out_port;
+  Ports<T> in_ports;
+  Ports<T> out_ports;
 
  private:
   F functor;
@@ -106,11 +103,11 @@ class Component final : public ComponentBase<Buffer> {
   ~Component() {}
 
   const Buffer& get_in_port_value(std::string name) {
-    return in_port.at(name)->get();
+    return in_ports.at(name)->get();
   }
 
   const Buffer& get_out_port_value(std::string name) {
-    return out_port.at(name)->get();
+    return out_ports.at(name)->get();
   }
 
   Buffer& get_input(std::string name) { return inputs.at(name); }
@@ -118,8 +115,8 @@ class Component final : public ComponentBase<Buffer> {
 };
 
 template <class C>
-void connect(C& target, std::string from, C& origin, std::string to) {
-  origin.connect(target, from, to);
+void connect(C& target, std::string out, C& origin, std::string in) {
+  origin.connect(target, out, in);
 }
 
 }  // namespace brica
