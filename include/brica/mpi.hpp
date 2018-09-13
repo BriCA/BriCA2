@@ -125,9 +125,6 @@ class Proxy final : public IComponent {
     target.get_in_port(to) = out_port;
   }
 
-  friend void connect(Component source, std::string from, Proxy target);
-  friend void connect(Proxy source, Component target, std::string to);
-
  private:
   int src;
   int dest;
@@ -140,11 +137,67 @@ class Proxy final : public IComponent {
   Buffer buffer;
 };
 
-void connect(Component& source, std::string from, Proxy& target) {
+class Broadcast final : public IComponent {
+ public:
+  Broadcast(int root)
+      : root(root),
+        in_port(std::make_shared<Port<Buffer>>()),
+        out_port(std::make_shared<Port<Buffer>>()) {
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  }
+  ~Broadcast() {}
+
+  Buffer get_input() { return in_port->get(); }
+  Buffer get_buffer() { return buffer; }
+  Buffer get_output() { return out_port->get(); }
+
+  std::shared_ptr<Port<Buffer>>& get_in_port() { return in_port; }
+  std::shared_ptr<Port<Buffer>>& get_out_port() { return out_port; }
+
+  void collect() {
+    if (rank == root) {
+      buffer = in_port->get();
+    }
+  }
+
+  void execute() {
+    int size = buffer.size();
+    MPI_Bcast(&size, 1, MPI_INT, root, MPI_COMM_WORLD);
+
+    if (rank != root) {
+      buffer.resize(size);
+    }
+
+    MPI_Bcast(buffer.data(), buffer.size(), MPI_CHAR, root, MPI_COMM_WORLD);
+  }
+
+  void expose() { out_port->set(buffer); }
+
+  void connect_from(Component& source, std::string from) {
+    in_port = source.get_out_port(from);
+  }
+
+  void connect_to(Component& target, std::string to) {
+    target.get_in_port(to) = out_port;
+  }
+
+ private:
+  int root;
+  int rank;
+
+  std::shared_ptr<Port<Buffer>> in_port;
+  std::shared_ptr<Port<Buffer>> out_port;
+
+  Buffer buffer;
+};
+
+template <class P>
+void connect(Component& source, std::string from, P& target) {
   target.connect_from(source, from);
 }
 
-void connect(Proxy& source, Component& target, std::string to) {
+template <class P>
+void connect(P& source, Component& target, std::string to) {
   source.connect_to(target, to);
 }
 
