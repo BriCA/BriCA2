@@ -22,14 +22,17 @@ TEST_CASE("two component chain", "[proxy]") {
 
   mpi::Proxy proxy(0, 1);
 
-  mpi::connect(emit, key, proxy);
-  mpi::connect(proxy, null, key);
-
   REQUIRE(emit.get_output(key).empty());
   REQUIRE(proxy.get_input().empty());
   REQUIRE(proxy.get_buffer().empty());
   REQUIRE(proxy.get_output().empty());
   REQUIRE(null.get_input(key).empty());
+
+  mpi::connect(emit, key, proxy);
+  mpi::connect(proxy, null, key);
+
+  REQUIRE(emit.get_out_port(key) == proxy.get_in_port());
+  REQUIRE(null.get_in_port(key) == proxy.get_out_port());
 
   emit.execute();
   emit.expose();

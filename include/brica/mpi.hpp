@@ -33,11 +33,7 @@
 namespace brica {
 namespace mpi {
 
-class Proxy;
-
 class Component final : public ComponentBase<Buffer> {
-  friend Proxy;
-
  public:
   Component(Functor f, int want) : ComponentBase<Buffer>(f), want(want) {
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -93,6 +89,9 @@ class Proxy final : public IComponent {
   Buffer get_buffer() { return buffer; }
   Buffer get_output() { return out_port->get(); }
 
+  std::shared_ptr<Port<Buffer>>& get_in_port() { return in_port; }
+  std::shared_ptr<Port<Buffer>>& get_out_port() { return out_port; }
+
   void collect() {
     if (rank == src) {
       buffer = in_port->get();
@@ -120,12 +119,12 @@ class Proxy final : public IComponent {
     }
   }
 
-  void connect_from(Component source, std::string from) {
-    in_port = source.out_ports.at(from);
+  void connect_from(Component& source, std::string from) {
+    in_port = source.get_out_port(from);
   }
 
-  void connect_to(Component target, std::string to) {
-    target.in_ports.at(to) = out_port;
+  void connect_to(Component& target, std::string to) {
+    target.get_in_port(to) = out_port;
   }
 
   friend void connect(Component source, std::string from, Proxy target);
@@ -143,11 +142,11 @@ class Proxy final : public IComponent {
   Buffer buffer;
 };
 
-void connect(Component source, std::string from, Proxy target) {
+void connect(Component& source, std::string from, Proxy& target) {
   target.connect_from(source, from);
 }
 
-void connect(Proxy source, Component target, std::string to) {
+void connect(Proxy& source, Component& target, std::string to) {
   source.connect_to(target, to);
 }
 

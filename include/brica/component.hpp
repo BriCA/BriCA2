@@ -56,7 +56,7 @@ class ComponentBase : public IComponent {
     in_ports.try_emplace(name, std::make_shared<Port<T>>());
   }
 
-  virtual std::shared_ptr<Port<T>> get_in_port(std::string name) {
+  virtual std::shared_ptr<Port<T>>& get_in_port(std::string name) {
     return in_ports.at(name);
   }
 
@@ -65,7 +65,7 @@ class ComponentBase : public IComponent {
     out_ports.try_emplace(name, std::make_shared<Port<T>>());
   }
 
-  virtual std::shared_ptr<Port<T>> get_out_port(std::string name) {
+  virtual std::shared_ptr<Port<T>>& get_out_port(std::string name) {
     return out_ports.at(name);
   }
 
