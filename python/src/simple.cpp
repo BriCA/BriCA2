@@ -29,23 +29,23 @@ class Component final : public ComponentBase {
   void make_in_port(std::string name) {
     ComponentBase::make_in_port(name);
     py::none none;
-    in_port.at(name)->set(none);
+    in_ports.at(name)->set(none);
     inputs.at(name) = none;
   }
 
   void make_out_port(std::string name) {
     ComponentBase::make_out_port(name);
     py::none none;
-    out_port.at(name)->set(none);
+    out_ports.at(name)->set(none);
     outputs.at(name) = none;
   }
 
   py::object get_in_port_value(std::string name) {
-    return in_port.at(name)->get();
+    return in_ports.at(name)->get();
   }
 
   py::object get_out_port_value(std::string name) {
-    return out_port.at(name)->get();
+    return out_ports.at(name)->get();
   }
 
   py::object get_input(std::string name) { return inputs.at(name); }
@@ -74,7 +74,7 @@ PYBIND11_MODULE(brica, m) {
   py::class_<brica::Timing>(m, "Timing")
       .def(py::init<brica::Time, brica::Time, brica::Time>());
 
-  py::class_<brica::VirtualTimeScheduler>(m, "VirtualTimePhasedScheduler")
+  py::class_<brica::VirtualTimePhasedScheduler>(m, "VirtualTimePhasedScheduler")
       .def(py::init<>())
       .def("add_component", &brica::VirtualTimePhasedScheduler::add_component)
       .def("step", &brica::VirtualTimePhasedScheduler::step);
