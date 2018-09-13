@@ -74,6 +74,11 @@ PYBIND11_MODULE(brica, m) {
   py::class_<brica::Timing>(m, "Timing")
       .def(py::init<brica::Time, brica::Time, brica::Time>());
 
+  py::class_<brica::VirtualTimeScheduler>(m, "VirtualTimePhasedScheduler")
+      .def(py::init<>())
+      .def("add_component", &brica::VirtualTimePhasedScheduler::add_component)
+      .def("step", &brica::VirtualTimePhasedScheduler::step);
+
   py::class_<brica::VirtualTimeScheduler>(m, "VirtualTimeScheduler")
       .def(py::init<>())
       .def("add_component", &brica::VirtualTimeScheduler::add_component)
