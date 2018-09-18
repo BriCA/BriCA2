@@ -1,6 +1,8 @@
 #ifndef __BRICA_THREAD_POOL_HPP__
 #define __BRICA_THREAD_POOL_HPP__
 
+#include "brica/resource_pool.hpp"
+
 #include <asio.hpp>
 
 #include <atomic>
@@ -13,9 +15,9 @@
 
 namespace brica {
 
-class ThreadPool {
+class ThreadPool : public ResourcePool {
  public:
-  ThreadPool(std::size_t size)
+  ThreadPool(std::size_t size = 0)
       : work(std::make_shared<asio::io_service::work>(io_service)),
         count(0),
         total(0) {

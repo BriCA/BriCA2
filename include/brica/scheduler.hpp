@@ -25,7 +25,7 @@
 #define __BRICA_KERNEL_SCHEDULER_HPP__
 
 #include "brica/component.hpp"
-#include "brica/thread_pool.hpp"
+#include "brica/resource_pool.hpp"
 
 #include <functional>
 #include <queue>
@@ -47,9 +47,8 @@ static const std::function<void()> nop([]() {});
 
 class VirtualTimePhasedScheduler {
  public:
-  VirtualTimePhasedScheduler(std::function<void()> f = nop,
-                             std::size_t n_threads = 0)
-      : synchronize(f), pool(n_threads) {}
+  VirtualTimePhasedScheduler(ResourcePool& pool = DefaultPool::singleton())
+      : pool(pool) {}
 
   void add_component(IComponent* component, std::size_t phase) {
     if (phase >= phases.size()) {
@@ -69,21 +68,18 @@ class VirtualTimePhasedScheduler {
         });
       }
       pool.wait();
-      synchronize();
 
       for (std::size_t j = 0; j < phases[i].size(); ++j) {
         IComponent* component = phases[i][j];
         pool.enqueue([component] { component->execute(); });
       }
       pool.wait();
-      synchronize();
     }
   }
 
  private:
   std::vector<std::vector<IComponent*>> phases;
-  std::function<void()> synchronize;
-  ThreadPool pool;
+  ResourcePool& pool;
 };
 
 class VirtualTimeScheduler {
@@ -97,8 +93,8 @@ class VirtualTimeScheduler {
   };
 
  public:
-  VirtualTimeScheduler(std::function<void()> f = nop, std::size_t n_threads = 0)
-      : synchronize(f), pool(n_threads) {}
+  VirtualTimeScheduler(ResourcePool& pool = DefaultPool::singleton())
+      : pool(pool) {}
 
   void add_component(IComponent* component, Timing timing) {
     event_queue.push({timing.offset, component, timing, false});
@@ -135,7 +131,6 @@ class VirtualTimeScheduler {
       pool.enqueue([component] { component->expose(); });
     }
     pool.wait();
-    synchronize();
 
     while (!awake.empty()) {
       IComponent* component = awake.front();
@@ -146,13 +141,11 @@ class VirtualTimeScheduler {
       });
     }
     pool.wait();
-    synchronize();
   }
 
  private:
   std::priority_queue<Event> event_queue;
-  std::function<void()> synchronize;
-  ThreadPool pool;
+  ResourcePool& pool;
 };
 
 }  // namespace brica
