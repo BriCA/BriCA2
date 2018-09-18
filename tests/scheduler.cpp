@@ -1,6 +1,8 @@
 #include "brica/brica.hpp"
 #include "catch.hpp"
 
+#include <iostream>
+
 using namespace brica;
 
 TEST_CASE("emit/pipe/null component scheduling", "[scheduler]") {

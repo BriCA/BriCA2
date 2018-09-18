@@ -25,6 +25,7 @@
 #define __BRICA_KERNEL_SCHEDULER_HPP__
 
 #include "brica/component.hpp"
+#include "brica/thread_pool.hpp"
 
 #include <functional>
 #include <queue>
@@ -46,7 +47,9 @@ static const std::function<void()> nop([]() {});
 
 class VirtualTimePhasedScheduler {
  public:
-  VirtualTimePhasedScheduler(std::function<void()> f = nop) : synchronize(f) {}
+  VirtualTimePhasedScheduler(std::function<void()> f = nop,
+                             std::size_t n_threads = 0)
+      : synchronize(f), pool(n_threads) {}
 
   void add_component(IComponent* component, std::size_t phase) {
     if (phase >= phases.size()) {
@@ -59,14 +62,20 @@ class VirtualTimePhasedScheduler {
   void step() {
     for (std::size_t i = 0; i < phases.size(); ++i) {
       for (std::size_t j = 0; j < phases[i].size(); ++j) {
-        phases[i][j]->collect();
-        phases[i][j]->execute();
+        IComponent* component = phases[i][j];
+        pool.enqueue([component] {
+          component->collect();
+          component->execute();
+        });
       }
+      pool.wait();
       synchronize();
 
       for (std::size_t j = 0; j < phases[i].size(); ++j) {
-        phases[i][j]->expose();
+        IComponent* component = phases[i][j];
+        pool.enqueue([component] { component->execute(); });
       }
+      pool.wait();
       synchronize();
     }
   }
@@ -74,6 +83,7 @@ class VirtualTimePhasedScheduler {
  private:
   std::vector<std::vector<IComponent*>> phases;
   std::function<void()> synchronize;
+  ThreadPool pool;
 };
 
 class VirtualTimeScheduler {
@@ -87,7 +97,8 @@ class VirtualTimeScheduler {
   };
 
  public:
-  VirtualTimeScheduler(std::function<void()> f = nop) : synchronize(f) {}
+  VirtualTimeScheduler(std::function<void()> f = nop, std::size_t n_threads = 0)
+      : synchronize(f), pool(n_threads) {}
 
   void add_component(IComponent* component, Timing timing) {
     event_queue.push({timing.offset, component, timing, false});
@@ -119,22 +130,29 @@ class VirtualTimeScheduler {
     }
 
     while (!asleep.empty()) {
-      asleep.front()->expose();
+      IComponent* component = asleep.front();
       asleep.pop();
+      pool.enqueue([component] { component->expose(); });
     }
+    pool.wait();
     synchronize();
 
     while (!awake.empty()) {
-      awake.front()->collect();
-      awake.front()->execute();
+      IComponent* component = awake.front();
       awake.pop();
+      pool.enqueue([component] {
+        component->collect();
+        component->execute();
+      });
     }
+    pool.wait();
     synchronize();
   }
 
  private:
   std::priority_queue<Event> event_queue;
   std::function<void()> synchronize;
+  ThreadPool pool;
 };
 
 }  // namespace brica
