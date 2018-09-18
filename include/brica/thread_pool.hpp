@@ -5,22 +5,17 @@
 
 #include <asio.hpp>
 
-#include <atomic>
-#include <condition_variable>
 #include <functional>
 #include <memory>
-#include <mutex>
 #include <thread>
 #include <vector>
 
 namespace brica {
 
-class ThreadPool : public ResourcePool {
+class ThreadPool : public CountedPool {
  public:
   ThreadPool(std::size_t size = 0)
-      : work(std::make_shared<asio::io_service::work>(io_service)),
-        count(0),
-        total(0) {
+      : work(std::make_shared<asio::io_service::work>(io_service)) {
     if (size == 0) {
       size = std::thread::hardware_concurrency();
     }
@@ -37,36 +32,14 @@ class ThreadPool : public ResourcePool {
     }
   }
 
-  void enqueue(std::function<void()> f) {
-    total++;
-
-    io_service.post([this, f] {
-      f();
-      count++;
-      cond.notify_all();
-    });
-  }
-
-  void wait() {
-    if (count == total) return;
-
-    std::unique_lock<std::mutex> lock(mutex);
-    cond.wait(lock, [this] { return count == total; });
-    count = 0;
-    total = 0;
+  void add(std::function<void()> f) {
+    io_service.post([f] { f(); });
   }
 
  private:
   asio::io_service io_service;
   std::shared_ptr<asio::io_service::work> work;
-
   std::vector<std::thread> threads;
-
-  std::atomic<std::size_t> count;
-  std::atomic<std::size_t> total;
-
-  std::mutex mutex;
-  std::condition_variable cond;
 };
 
 }  // namespace brica
