@@ -1,6 +1,8 @@
 #ifndef __BRICA_THREAD_POOL_HPP__
 #define __BRICA_THREAD_POOL_HPP__
 
+#define ASIO_STANDALONE
+
 #include "brica/resource_pool.hpp"
 
 #include <asio.hpp>
