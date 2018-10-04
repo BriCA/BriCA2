@@ -1,6 +1,8 @@
 #include <pybind11/pybind11.h>
 #include "brica/brica.hpp"
 
+#include <iostream>
+
 namespace py = pybind11;
 
 using Dict = brica::AssocVec<std::string, py::object>;
@@ -52,6 +54,17 @@ class Component final : public ComponentBase {
   py::object get_output(std::string name) { return outputs.at(name); }
 };
 
+class MultiprocessPool : public brica::CountedPool {
+ public:
+  MultiprocessPool(py::object pool) : pool(pool) {}
+  void add(std::function<void()> f) {
+    pool.attr("apply_async")(py::cpp_function(f));
+  }
+
+ private:
+  py::object pool;
+};
+
 PYBIND11_MODULE(brica, m) {
   py::class_<brica::IComponent>(m, "IComponent")
       .def("collect", &brica::IComponent::collect)
@@ -76,11 +89,23 @@ PYBIND11_MODULE(brica, m) {
 
   py::class_<brica::VirtualTimePhasedScheduler>(m, "VirtualTimePhasedScheduler")
       .def(py::init<>())
+      .def(py::init<brica::ResourcePool&>())
       .def("add_component", &brica::VirtualTimePhasedScheduler::add_component)
       .def("step", &brica::VirtualTimePhasedScheduler::step);
 
   py::class_<brica::VirtualTimeScheduler>(m, "VirtualTimeScheduler")
       .def(py::init<>())
+      .def(py::init<brica::ResourcePool&>())
       .def("add_component", &brica::VirtualTimeScheduler::add_component)
       .def("step", &brica::VirtualTimeScheduler::step);
+
+  py::class_<brica::ResourcePool>(m, "ResourcePool")
+      .def("enqueue", &brica::ResourcePool::enqueue)
+      .def("wait", &brica::ResourcePool::wait);
+
+  py::class_<brica::CountedPool, brica::ResourcePool>(m, "CountedPool")
+      .def("add", &brica::CountedPool::add);
+
+  py::class_<MultiprocessPool, brica::CountedPool>(m, "MultiprocessPool")
+      .def(py::init<py::object>());
 }
