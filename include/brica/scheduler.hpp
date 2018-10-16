@@ -25,7 +25,7 @@
 #define __BRICA_KERNEL_SCHEDULER_HPP__
 
 #include "brica/component.hpp"
-#include "brica/resource_pool.hpp"
+#include "brica/thread_pool.hpp"
 
 #include <functional>
 #include <queue>
@@ -47,8 +47,7 @@ static const std::function<void()> nop([]() {});
 
 class VirtualTimePhasedScheduler {
  public:
-  VirtualTimePhasedScheduler(ResourcePool& pool = DefaultPool::singleton())
-      : pool(pool) {}
+  VirtualTimePhasedScheduler(std::size_t n = 0) : pool(n) {}
 
   void add_component(IComponent* component, std::size_t phase) {
     if (phase >= phases.size()) {
@@ -79,7 +78,7 @@ class VirtualTimePhasedScheduler {
 
  private:
   std::vector<std::vector<IComponent*>> phases;
-  ResourcePool& pool;
+  ThreadPool pool;
 };
 
 class VirtualTimeScheduler {
@@ -93,8 +92,7 @@ class VirtualTimeScheduler {
   };
 
  public:
-  VirtualTimeScheduler(ResourcePool& pool = DefaultPool::singleton())
-      : pool(pool) {}
+  VirtualTimeScheduler(std::size_t n = 0) : pool(n) {}
 
   void add_component(IComponent* component, Timing timing) {
     event_queue.push({timing.offset, component, timing, false});
@@ -145,7 +143,7 @@ class VirtualTimeScheduler {
 
  private:
   std::priority_queue<Event> event_queue;
-  ResourcePool& pool;
+  ThreadPool pool;
 };
 
 }  // namespace brica
