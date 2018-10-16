@@ -4,6 +4,9 @@ nobase_include_HEADERS = brica/brica.hpp \
 			 brica/component.hpp \
 			 brica/functor.hpp \
 			 brica/mpi.hpp \
-			 brica/scheduler.hpp
+			 brica/port.hpp \
+			 brica/resource_pool.hpp \
+			 brica/scheduler.hpp \
+			 brica/thread_pool.hpp
 
 noinst_HEADERS = catch.hpp
