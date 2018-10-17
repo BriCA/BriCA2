@@ -75,7 +75,7 @@ class VirtualTimePhasedScheduler {
 
       for (std::size_t j = 0; j < phases[i].size(); ++j) {
         IComponent* component = phases[i][j];
-        pool.enqueue([component] { component->execute(); });
+        pool.enqueue([component] { component->expose(); });
       }
       pool.wait();
     }
