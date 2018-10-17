@@ -31,6 +31,8 @@
 #include <queue>
 #include <vector>
 
+#include <iostream>
+
 namespace brica {
 
 using Time = unsigned long long;
@@ -47,7 +49,9 @@ static const std::function<void()> nop([]() {});
 
 class VirtualTimePhasedScheduler {
  public:
-  VirtualTimePhasedScheduler(std::size_t n = 0) : pool(n) {}
+  VirtualTimePhasedScheduler(std::size_t n = 0) : sync(nop), pool(n) {}
+  VirtualTimePhasedScheduler(std::function<void()> f = nop, std::size_t n = 0)
+      : sync(f), pool(n) {}
 
   void add_component(IComponent* component, std::size_t phase) {
     if (phase >= phases.size()) {
@@ -67,6 +71,7 @@ class VirtualTimePhasedScheduler {
         });
       }
       pool.wait();
+      sync();
 
       for (std::size_t j = 0; j < phases[i].size(); ++j) {
         IComponent* component = phases[i][j];
@@ -74,10 +79,12 @@ class VirtualTimePhasedScheduler {
       }
       pool.wait();
     }
+    sync();
   }
 
  private:
   std::vector<std::vector<IComponent*>> phases;
+  std::function<void()> sync;
   ThreadPool pool;
 };
 
