@@ -31,8 +31,6 @@
 #include <queue>
 #include <vector>
 
-#include <iostream>
-
 namespace brica {
 
 using Time = unsigned long long;
