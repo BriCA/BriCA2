@@ -29,7 +29,6 @@
 #include "brica/component.hpp"
 #include "brica/functor.hpp"
 #include "brica/port.hpp"
-#include "brica/resource_pool.hpp"
 #include "brica/scheduler.hpp"
 #include "brica/thread_pool.hpp"
 

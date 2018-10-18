@@ -3,67 +3,56 @@
 
 #define ASIO_STANDALONE
 
-#include "brica/resource_pool.hpp"
+#include <asio.hpp>
 
+#include <atomic>
 #include <functional>
 #include <memory>
-#include <queue>
 #include <thread>
 #include <vector>
 
 namespace brica {
 
-class ThreadPool : public CountedPool {
+class ThreadPool {
  public:
-  ThreadPool(std::size_t size = 0) {
+  ThreadPool(std::size_t size = 0)
+      : work(std::make_shared<asio::io_service::work>(io_service)) {
     if (size == 0) {
       size = std::thread::hardware_concurrency();
     }
 
     for (std::size_t i = 0; i < size; ++i) {
-      threads.emplace_back([this] {
-        for (;;) {
-          std::function<void()> task;
-
-          {
-            std::unique_lock<std::mutex> lock(mutex);
-            cond.wait(lock);
-            if (tasks.empty() && stop) {
-              return;
-            }
-            task = std::move(tasks.front());
-            tasks.pop();
-          }
-
-          task();
-        }
-      });
+      threads.emplace_back([this] { io_service.run(); });
     }
   }
 
   ~ThreadPool() {
-    {
-      std::unique_lock<std::mutex> lock(mutex);
-      stop = true;
-    }
-    cond.notify_all();
+    work.reset();
     for (std::size_t i = 0; i < threads.size(); ++i) {
       threads[i].join();
     }
   }
 
-  void add(std::function<void()> f) {
-    tasks.push([f] { f(); });
-    cond.notify_one();
+  void request(std::size_t n) { count = n; }
+
+  void enqueue(std::function<void()>&& f) {
+    io_service.post([this, f] {
+      f();
+      --count;
+    });
+  }
+
+  void sync() {
+    while (count > 0) {
+    }
   }
 
  private:
+  asio::io_service io_service;
+  std::shared_ptr<asio::io_service::work> work;
   std::vector<std::thread> threads;
-  std::queue<std::function<void()>> tasks;
 
-  std::mutex mutex;
-  std::condition_variable cond;
-  bool stop;
+  std::atomic<std::size_t> count;
 };
 
 }  // namespace brica

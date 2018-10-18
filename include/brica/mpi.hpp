@@ -168,7 +168,9 @@ class Broadcast final : public IComponent {
       buffer.resize(size);
     }
 
-    MPI_Bcast(buffer.data(), buffer.size(), MPI_CHAR, root, MPI_COMM_WORLD);
+    if (size > 0) {
+      MPI_Bcast(buffer.data(), buffer.size(), MPI_CHAR, root, MPI_COMM_WORLD);
+    }
   }
 
   void expose() { out_port->set(buffer); }

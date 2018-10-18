@@ -61,6 +61,7 @@ class VirtualTimePhasedScheduler {
 
   void step() {
     for (std::size_t i = 0; i < phases.size(); ++i) {
+      pool.request(phases[i].size());
       for (std::size_t j = 0; j < phases[i].size(); ++j) {
         IComponent* component = phases[i][j];
         pool.enqueue([component] {
@@ -68,16 +69,17 @@ class VirtualTimePhasedScheduler {
           component->execute();
         });
       }
-      pool.wait();
+      pool.sync();
       sync();
 
+      pool.request(phases[i].size());
       for (std::size_t j = 0; j < phases[i].size(); ++j) {
         IComponent* component = phases[i][j];
         pool.enqueue([component] { component->expose(); });
       }
-      pool.wait();
+      pool.sync();
+      sync();
     }
-    sync();
   }
 
  private:
@@ -128,13 +130,15 @@ class VirtualTimeScheduler {
       event_queue.push(next);
     }
 
+    pool.request(asleep.size());
     while (!asleep.empty()) {
       IComponent* component = asleep.front();
       asleep.pop();
       pool.enqueue([component] { component->expose(); });
     }
-    pool.wait();
+    pool.sync();
 
+    pool.request(awake.size());
     while (!awake.empty()) {
       IComponent* component = awake.front();
       awake.pop();
@@ -143,7 +147,7 @@ class VirtualTimeScheduler {
         component->execute();
       });
     }
-    pool.wait();
+    pool.sync();
   }
 
  private:
