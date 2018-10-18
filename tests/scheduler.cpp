@@ -84,4 +84,8 @@ TEST_CASE("emit/pipe/null component thread parallel scheduling",
 
   CHECK(value == null.get_input(key));
   CHECK(value == null.get_in_port_value(key));
+
+  for (std::size_t i = 0; i < 1000; ++i) {
+    s.step();
+  }
 }
