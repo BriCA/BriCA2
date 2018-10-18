@@ -31,52 +31,67 @@
 namespace brica {
 namespace mpi {
 
-class Component final : public ComponentBase<Buffer> {
+class Component final : public IComponent {
  public:
-  Component(Functor f, int want) : ComponentBase<Buffer>(f), want(want) {
+  Component(Functor f, int want) : base(f), want(want) {
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   }
   ~Component() {}
 
   void collect() {
     if (want == rank) {
-      ComponentBase<Buffer>::collect();
+      base.collect();
     }
   }
 
   void execute() {
     if (want == rank) {
-      ComponentBase<Buffer>::execute();
+      base.execute();
     }
   }
 
   void expose() {
     if (want == rank) {
-      ComponentBase<Buffer>::expose();
+      base.expose();
     }
   }
 
+  void make_in_port(std::string name) { base.make_in_port(name); }
+
+  std::shared_ptr<Port<Buffer>>& get_in_port(std::string name) {
+    return base.get_in_port(name);
+  }
+
+  void make_out_port(std::string name) { base.make_out_port(name); }
+
+  std::shared_ptr<Port<Buffer>>& get_out_port(std::string name) {
+    return base.get_out_port(name);
+  }
+
   const Buffer& get_in_port_value(std::string name) {
-    return in_ports.at(name)->get();
+    return base.get_in_port_value(name);
   }
 
   const Buffer& get_out_port_value(std::string name) {
-    return out_ports.at(name)->get();
+    return base.get_out_port_value(name);
   }
 
-  Buffer& get_input(std::string name) { return inputs.at(name); }
-  Buffer& get_output(std::string name) { return outputs.at(name); }
+  Buffer& get_input(std::string name) { return base.get_input(name); }
+  Buffer& get_output(std::string name) { return base.get_output(name); }
 
  private:
+  brica::Component base;
+
   int want;
   int rank;
 };
 
 class Proxy final : public IComponent {
  public:
-  Proxy(int src, int dest)
+  Proxy(int src, int dest, int tag = 0)
       : src(src),
         dest(dest),
+        tag(tag),
         in_port(std::make_shared<Port<Buffer>>()),
         out_port(std::make_shared<Port<Buffer>>()) {
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -98,16 +113,17 @@ class Proxy final : public IComponent {
 
   void execute() {
     if (rank == src) {
-      int size = buffer.size();
-      MPI_Send(&size, 1, MPI_INT, dest, 0, MPI_COMM_WORLD);
-      MPI_Send(buffer.data(), size, MPI_CHAR, dest, 0, MPI_COMM_WORLD);
+      MPI_Send(buffer.data(), buffer.size(), MPI_CHAR, dest, tag,
+               MPI_COMM_WORLD);
     }
 
     if (rank == dest) {
+      MPI_Probe(src, tag, MPI_COMM_WORLD, &status);
       int size;
-      MPI_Recv(&size, 1, MPI_INT, src, 0, MPI_COMM_WORLD, &status);
+      MPI_Get_count(&status, MPI_CHAR, &size);
       buffer.resize(size);
-      MPI_Recv(buffer.data(), size, MPI_CHAR, src, 0, MPI_COMM_WORLD, &status);
+      MPI_Recv(buffer.data(), buffer.size(), MPI_CHAR, src, tag, MPI_COMM_WORLD,
+               MPI_STATUS_IGNORE);
     }
   }
 
@@ -128,6 +144,7 @@ class Proxy final : public IComponent {
  private:
   int src;
   int dest;
+  int tag;
   int rank;
   MPI_Status status;
 
@@ -161,16 +178,19 @@ class Broadcast final : public IComponent {
   }
 
   void execute() {
-    int size = buffer.size();
+    int size;
+
+    if (rank == root) {
+      size = buffer.size();
+    }
+
     MPI_Bcast(&size, 1, MPI_INT, root, MPI_COMM_WORLD);
 
     if (rank != root) {
       buffer.resize(size);
     }
 
-    if (size > 0) {
-      MPI_Bcast(buffer.data(), buffer.size(), MPI_CHAR, root, MPI_COMM_WORLD);
-    }
+    MPI_Bcast(buffer.data(), buffer.size(), MPI_CHAR, root, MPI_COMM_WORLD);
   }
 
   void expose() { out_port->set(buffer); }
