@@ -186,6 +186,10 @@ class Broadcast final : public IComponent {
 
     MPI_Bcast(&size, 1, MPI_INT, root, MPI_COMM_WORLD);
 
+    if (size == 0) {
+      return;
+    }
+
     if (rank != root) {
       buffer.resize(size);
     }
