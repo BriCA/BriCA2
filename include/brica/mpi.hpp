@@ -79,6 +79,10 @@ class Component final : public IComponent {
   Buffer& get_input(std::string name) { return base.get_input(name); }
   Buffer& get_output(std::string name) { return base.get_output(name); }
 
+  void connect(Component& target, std::string out, std::string in) {
+    base.connect(target.base, out, in);
+  }
+
  private:
   brica::Component base;
 
