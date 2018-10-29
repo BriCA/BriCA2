@@ -25,12 +25,11 @@
 #define __BRICA_KERNEL_SCHEDULER_HPP__
 
 #include "brica/component.hpp"
+#include "brica/thread_pool.hpp"
 
 #include <functional>
 #include <queue>
 #include <vector>
-
-#include <omp.h>
 
 namespace brica {
 
@@ -48,7 +47,9 @@ static const std::function<void()> nop([]() {});
 
 class VirtualTimePhasedScheduler {
  public:
-  VirtualTimePhasedScheduler(std::function<void()> f = nop) : sync(f) {}
+  VirtualTimePhasedScheduler(std::size_t n = 0) : sync(nop), pool(n) {}
+  VirtualTimePhasedScheduler(std::function<void()> f = nop, std::size_t n = 0)
+      : sync(f), pool(n) {}
 
   void add_component(IComponent* component, std::size_t phase) {
     if (phase >= phases.size()) {
@@ -60,19 +61,23 @@ class VirtualTimePhasedScheduler {
 
   void step() {
     for (std::size_t i = 0; i < phases.size(); ++i) {
-#pragma omp parallel for
+      pool.request(phases[i].size());
       for (std::size_t j = 0; j < phases[i].size(); ++j) {
         IComponent* component = phases[i][j];
-        component->collect();
-        component->execute();
+        pool.enqueue([component] {
+          component->collect();
+          component->execute();
+        });
       }
+      pool.sync();
       sync();
 
-#pragma omp parallel for
+      pool.request(phases[i].size());
       for (std::size_t j = 0; j < phases[i].size(); ++j) {
         IComponent* component = phases[i][j];
-        component->expose();
+        pool.enqueue([component] { component->expose(); });
       }
+      pool.sync();
       sync();
     }
   }
@@ -80,6 +85,7 @@ class VirtualTimePhasedScheduler {
  private:
   std::vector<std::vector<IComponent*>> phases;
   std::function<void()> sync;
+  ThreadPool pool;
 };
 
 class VirtualTimeScheduler {
@@ -93,7 +99,7 @@ class VirtualTimeScheduler {
   };
 
  public:
-  VirtualTimeScheduler(std::function<void()> f = nop) : sync(f) {}
+  VirtualTimeScheduler(std::size_t n = 0) : pool(n) {}
 
   void add_component(IComponent* component, Timing timing) {
     event_queue.push({timing.offset, component, timing, false});
@@ -124,27 +130,29 @@ class VirtualTimeScheduler {
       event_queue.push(next);
     }
 
-#pragma omp parallel
+    pool.request(asleep.size());
     while (!asleep.empty()) {
       IComponent* component = asleep.front();
       asleep.pop();
-      component->expose();
+      pool.enqueue([component] { component->expose(); });
     }
-    sync();
+    pool.sync();
 
-#pragma omp parallel
+    pool.request(awake.size());
     while (!awake.empty()) {
       IComponent* component = awake.front();
       awake.pop();
-      component->collect();
-      component->execute();
+      pool.enqueue([component] {
+        component->collect();
+        component->execute();
+      });
     }
-    sync();
+    pool.sync();
   }
 
  private:
   std::priority_queue<Event> event_queue;
-  std::function<void()> sync;
+  ThreadPool pool;
 };
 
 }  // namespace brica
