@@ -118,6 +118,8 @@ class AssocVec {
   allocator_type get_allocator() const { return data.get_allocator(); }
 
   /* Accessors */
+  key_type& key(size_type pos) { return data.at(pos).first; }
+
   mapped_type& at(const key_type& key) {
     iterator lower = lower_bound(key);
     if (lower != end() && lower->first == key) {

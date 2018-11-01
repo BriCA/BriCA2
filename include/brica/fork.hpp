@@ -5,11 +5,14 @@
 #include "brica/functor.hpp"
 #include "brica/port.hpp"
 
+#include <algorithm>
 #include <sstream>
+#include <string>
 
 #include <fcntl.h>
 #include <semaphore.h>
 #include <signal.h>
+#include <sys/mman.h>
 #include <sys/types.h>
 #include <unistd.h>
 
@@ -20,7 +23,18 @@
 
 namespace brica {
 
-class ForkComponent : IComponent {
+void bufprint(Buffer buffer) {
+  std::cout << getpid() << ": ";
+  for (std::size_t i = 0; i < buffer.size(); ++i) {
+    if (i > 0) {
+      std::cout << " ";
+    }
+    std::cout << static_cast<int>(buffer[i]);
+  }
+  std::cout << std::endl;
+}
+
+class ForkComponent final : public IComponent {
  public:
   ForkComponent() {
     std::stringstream ss;
@@ -36,12 +50,16 @@ class ForkComponent : IComponent {
 
       for (;;) {
         sem_wait(sem);
-        std::cout << "execute" << std::endl;
+        for (std::size_t i = 0; i < inputs.size(); ++i) {
+          recv_input(inputs.key(i));
+        }
         sem_post(sem);
       }
     }
 
     sem_wait(sem);
+
+    inputs["default"] = Buffer({1, 2, 3});
   }
 
   ~ForkComponent() {
@@ -50,6 +68,56 @@ class ForkComponent : IComponent {
     sem_unlink(name.c_str());
   }
 
+ private:
+  void send_input(std::string key, Buffer buffer) {
+    bufprint(buffer);
+    std::string port_size_name = name + ":in:" + key + ":size";
+    std::string port_data_name = name + ":in:" + key + ":data";
+
+    std::size_t size = buffer.size();
+    int size_fd = shm_open(port_size_name.c_str(), O_CREAT | O_RDWR, 0600);
+    ftruncate(size_fd, sizeof(std::size_t));
+    void* size_ptr = mmap(0, sizeof(std::size_t), PROT_READ | PROT_WRITE,
+                          MAP_SHARED, size_fd, 0);
+    std::cout << "send" << std::endl;
+    std::copy(&size, &size + sizeof(std::size_t), size_ptr);
+    std::cout << "send" << std::endl;
+
+    char* data = buffer.data();
+    int data_fd = shm_open(port_data_name.c_str(), O_CREAT | O_RDWR, 0600);
+    ftruncate(data_fd, sizeof(char) * size);
+    void* data_ptr = mmap(0, sizeof(char) * size, PROT_READ | PROT_WRITE,
+                          MAP_SHARED, size_fd, 0);
+    std::copy(data, data + size, data_ptr);
+  }
+
+  Buffer recv_input(std::string key) {
+    std::cout << "recv" << std::endl;
+    std::string port_size_name = name + ":in:" + key + ":size";
+    std::string port_data_name = name + ":in:" + key + ":data";
+
+    int size_fd = shm_open(port_size_name.c_str(), O_CREAT | O_RDWR, 0600);
+    ftruncate(size_fd, sizeof(std::size_t));
+    std::size_t* size_ptr = static_cast<std::size_t*>(
+        mmap(0, sizeof(std::size_t), PROT_READ | PROT_WRITE, MAP_SHARED,
+             size_fd, 0));
+    std::size_t size = *size_ptr;
+
+    Buffer buffer(size);
+
+    int data_fd = shm_open(port_data_name.c_str(), O_CREAT | O_RDWR, 0600);
+    ftruncate(data_fd, sizeof(char) * size);
+    char* data_ptr =
+        static_cast<char*>(mmap(0, sizeof(char) * size, PROT_READ | PROT_WRITE,
+                                MAP_SHARED, size_fd, 0));
+    std::copy(data_ptr, data_ptr + size, buffer.data());
+
+    bufprint(buffer);
+
+    return buffer;
+  }
+
+ public:
   void collect() {
     for (std::size_t i = 0; i < inputs.size(); ++i) {
       inputs.index(i) = in_ports.index(i)->get();
@@ -57,6 +125,9 @@ class ForkComponent : IComponent {
   }
 
   void execute() {
+    for (std::size_t i = 0; i < inputs.size(); ++i) {
+      send_input(inputs.key(i), inputs.index(i));
+    }
     sem_post(sem);
     sem_wait(sem);
   }
