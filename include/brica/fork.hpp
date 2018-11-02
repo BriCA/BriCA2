@@ -9,6 +9,8 @@
 #include <sstream>
 #include <string>
 
+#include <err.h>
+#include <errno.h>
 #include <fcntl.h>
 #include <semaphore.h>
 #include <signal.h>
@@ -23,22 +25,11 @@
 
 namespace brica {
 
-void bufprint(Buffer buffer) {
-  std::cout << getpid() << ": ";
-  for (std::size_t i = 0; i < buffer.size(); ++i) {
-    if (i > 0) {
-      std::cout << " ";
-    }
-    std::cout << static_cast<int>(buffer[i]);
-  }
-  std::cout << std::endl;
-}
-
 class ForkComponent final : public IComponent {
  public:
-  ForkComponent() {
+  ForkComponent(std::string id) {
     std::stringstream ss;
-    ss << '/' << getpid() << ':' << static_cast<void*>(this);
+    ss << '/' << getpid() << ':' << id;
     name = ss.str();
 
     pid = fork();
@@ -50,71 +41,159 @@ class ForkComponent final : public IComponent {
 
       for (;;) {
         sem_wait(sem);
-        for (std::size_t i = 0; i < inputs.size(); ++i) {
-          recv_input(inputs.key(i));
-        }
+        recv_dict(outputs);
         sem_post(sem);
       }
     }
 
     sem_wait(sem);
-
-    inputs["default"] = Buffer({1, 2, 3});
   }
 
   ~ForkComponent() {
     kill(pid, SIGUSR1);
     sem_close(sem);
     sem_unlink(name.c_str());
+    clean_shm();
   }
 
  private:
-  void send_input(std::string key, Buffer buffer) {
-    bufprint(buffer);
-    std::string port_size_name = name + ":in:" + key + ":size";
-    std::string port_data_name = name + ":in:" + key + ":data";
+  void send_dict(Dict& dict) {
+    std::string stat_name = name + ":stat";
+    std::string lens_name = name + ":lens";
+    std::string size_name = name + ":size";
+    std::string keys_name = name + ":keys";
+    std::string vals_name = name + ":vals";
 
-    std::size_t size = buffer.size();
-    int size_fd = shm_open(port_size_name.c_str(), O_CREAT | O_RDWR, 0600);
-    ftruncate(size_fd, sizeof(std::size_t));
-    void* size_ptr = mmap(0, sizeof(std::size_t), PROT_READ | PROT_WRITE,
-                          MAP_SHARED, size_fd, 0);
-    std::cout << "send" << std::endl;
-    std::copy(&size, &size + sizeof(std::size_t), size_ptr);
-    std::cout << "send" << std::endl;
+    int stat_fd = shm_open(stat_name.c_str(), O_CREAT | O_RDWR, 0600);
+    ftruncate(stat_fd, sizeof(std::size_t));
+    std::size_t* stat_ptr = reinterpret_cast<std::size_t*>(
+        mmap(0, sizeof(std::size_t), PROT_READ | PROT_WRITE, MAP_SHARED,
+             stat_fd, 0));
+    *stat_ptr = dict.size();
 
-    char* data = buffer.data();
-    int data_fd = shm_open(port_data_name.c_str(), O_CREAT | O_RDWR, 0600);
-    ftruncate(data_fd, sizeof(char) * size);
-    void* data_ptr = mmap(0, sizeof(char) * size, PROT_READ | PROT_WRITE,
-                          MAP_SHARED, size_fd, 0);
-    std::copy(data, data + size, data_ptr);
+    int lens_fd = shm_open(lens_name.c_str(), O_CREAT | O_RDWR, 0600);
+    ftruncate(lens_fd, sizeof(std::size_t) * dict.size());
+    std::size_t* lens_ptr = reinterpret_cast<std::size_t*>(
+        mmap(0, sizeof(std::size_t) * dict.size(), PROT_READ | PROT_WRITE,
+             MAP_SHARED, lens_fd, 0));
+
+    int size_fd = shm_open(size_name.c_str(), O_CREAT | O_RDWR, 0600);
+    ftruncate(size_fd, sizeof(std::size_t) * dict.size());
+    std::size_t* size_ptr = reinterpret_cast<std::size_t*>(
+        mmap(0, sizeof(std::size_t) * dict.size(), PROT_READ | PROT_WRITE,
+             MAP_SHARED, size_fd, 0));
+
+    std::size_t keys_size = 0;
+    std::size_t vals_size = 0;
+
+    for (std::size_t i = 0; i < dict.size(); ++i) {
+      std::string key = dict.key(i);
+      Buffer val = dict.index(i);
+      keys_size += lens_ptr[i] = key.size();
+      vals_size += size_ptr[i] = val.size();
+    }
+
+    int keys_fd = shm_open(keys_name.c_str(), O_CREAT | O_RDWR, 0600);
+    ftruncate(keys_fd, sizeof(char) * keys_size);
+    char* keys_ptr = reinterpret_cast<char*>(mmap(0, sizeof(char) * keys_size,
+                                                  PROT_READ | PROT_WRITE,
+                                                  MAP_SHARED, keys_fd, 0));
+
+    int vals_fd = shm_open(vals_name.c_str(), O_CREAT | O_RDWR, 0600);
+    ftruncate(vals_fd, sizeof(char) * vals_size);
+    char* vals_ptr = reinterpret_cast<char*>(mmap(0, sizeof(char) * vals_size,
+                                                  PROT_READ | PROT_WRITE,
+                                                  MAP_SHARED, vals_fd, 0));
+
+    for (std::size_t i = 0; i < dict.size(); ++i) {
+      std::string key = dict.key(i);
+      Buffer val = dict.index(i);
+      std::copy(key.begin(), key.end(), keys_ptr);
+      std::copy(val.begin(), val.end(), vals_ptr);
+      keys_ptr += key.size();
+      vals_ptr += val.size();
+    }
+
+    close(stat_fd);
+    close(lens_fd);
+    close(size_fd);
+    close(keys_fd);
+    close(vals_fd);
   }
 
-  Buffer recv_input(std::string key) {
-    std::cout << "recv" << std::endl;
-    std::string port_size_name = name + ":in:" + key + ":size";
-    std::string port_data_name = name + ":in:" + key + ":data";
+  void recv_dict(Dict& dict) {
+    std::string stat_name = name + ":stat";
+    std::string lens_name = name + ":lens";
+    std::string size_name = name + ":size";
+    std::string keys_name = name + ":keys";
+    std::string vals_name = name + ":vals";
 
-    int size_fd = shm_open(port_size_name.c_str(), O_CREAT | O_RDWR, 0600);
-    ftruncate(size_fd, sizeof(std::size_t));
-    std::size_t* size_ptr = static_cast<std::size_t*>(
+    int stat_fd = shm_open(stat_name.c_str(), O_RDWR);
+    ftruncate(stat_fd, sizeof(std::size_t));
+    std::size_t* stat_ptr = reinterpret_cast<std::size_t*>(
         mmap(0, sizeof(std::size_t), PROT_READ | PROT_WRITE, MAP_SHARED,
+             stat_fd, 0));
+    std::size_t size = *stat_ptr;
+
+    int lens_fd = shm_open(lens_name.c_str(), O_CREAT | O_RDWR, 0600);
+    ftruncate(lens_fd, sizeof(std::size_t) * size);
+    std::size_t* lens_ptr = reinterpret_cast<std::size_t*>(
+        mmap(0, sizeof(std::size_t) * size, PROT_READ | PROT_WRITE, MAP_SHARED,
+             lens_fd, 0));
+
+    int size_fd = shm_open(size_name.c_str(), O_CREAT | O_RDWR, 0600);
+    ftruncate(size_fd, sizeof(std::size_t) * size);
+    std::size_t* size_ptr = reinterpret_cast<std::size_t*>(
+        mmap(0, sizeof(std::size_t) * size, PROT_READ | PROT_WRITE, MAP_SHARED,
              size_fd, 0));
-    std::size_t size = *size_ptr;
 
-    Buffer buffer(size);
+    std::size_t keys_size = 0;
+    std::size_t vals_size = 0;
 
-    int data_fd = shm_open(port_data_name.c_str(), O_CREAT | O_RDWR, 0600);
-    ftruncate(data_fd, sizeof(char) * size);
-    char* data_ptr =
-        static_cast<char*>(mmap(0, sizeof(char) * size, PROT_READ | PROT_WRITE,
-                                MAP_SHARED, size_fd, 0));
-    std::copy(data_ptr, data_ptr + size, buffer.data());
+    for (std::size_t i = 0; i < size; ++i) {
+      keys_size += lens_ptr[i];
+      vals_size += size_ptr[i];
+    }
 
-    bufprint(buffer);
+    int keys_fd = shm_open(keys_name.c_str(), O_CREAT | O_RDWR, 0600);
+    ftruncate(keys_fd, sizeof(char) * keys_size);
+    char* keys_ptr = reinterpret_cast<char*>(mmap(0, sizeof(char) * keys_size,
+                                                  PROT_READ | PROT_WRITE,
+                                                  MAP_SHARED, keys_fd, 0));
 
-    return buffer;
+    int vals_fd = shm_open(vals_name.c_str(), O_CREAT | O_RDWR, 0600);
+    ftruncate(vals_fd, sizeof(char) * vals_size);
+    char* vals_ptr = reinterpret_cast<char*>(mmap(0, sizeof(char) * vals_size,
+                                                  PROT_READ | PROT_WRITE,
+                                                  MAP_SHARED, vals_fd, 0));
+
+    for (std::size_t i = 0; i < size; ++i) {
+      std::string key(keys_ptr, keys_ptr + lens_ptr[i]);
+      Buffer val(vals_ptr, vals_ptr + size_ptr[i]);
+      dict[key] = val;
+      keys_ptr += lens_ptr[i];
+      vals_ptr += size_ptr[i];
+    }
+
+    close(stat_fd);
+    close(lens_fd);
+    close(size_fd);
+    close(keys_fd);
+    close(vals_fd);
+  }
+
+  void clean_shm() {
+    std::string stat_name = name + ":stat";
+    std::string lens_name = name + ":lens";
+    std::string size_name = name + ":size";
+    std::string keys_name = name + ":keys";
+    std::string vals_name = name + ":vals";
+
+    shm_unlink(stat_name.c_str());
+    shm_unlink(lens_name.c_str());
+    shm_unlink(size_name.c_str());
+    shm_unlink(keys_name.c_str());
+    shm_unlink(vals_name.c_str());
   }
 
  public:
@@ -125,9 +204,7 @@ class ForkComponent final : public IComponent {
   }
 
   void execute() {
-    for (std::size_t i = 0; i < inputs.size(); ++i) {
-      send_input(inputs.key(i), inputs.index(i));
-    }
+    send_dict(inputs);
     sem_post(sem);
     sem_wait(sem);
   }
