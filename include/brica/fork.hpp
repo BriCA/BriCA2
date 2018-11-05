@@ -21,48 +21,52 @@
 #include <err.h>
 #include <errno.h>
 
-#include <iostream>
-
 namespace brica {
 
 class ForkComponent final : public IComponent {
  public:
-  ForkComponent(std::string id) {
-    std::stringstream ss;
-    ss << '/' << getpid() << ':' << id;
-    name = ss.str();
-
-    pid = fork();
-    sem = sem_open(name.c_str(), O_CREAT, 0600, 0);
-
-    if (pid == 0) {
-      signal(SIGUSR1, [](int) { exit(0); });
-      sem_post(sem);
-
-      for (;;) {
-        sem_wait(sem);
-        recv_dict(outputs);
-        sem_post(sem);
-      }
-    }
-
-    sem_wait(sem);
-  }
+  ForkComponent(Functor f) : f(f) {}
 
   ~ForkComponent() {
-    kill(pid, SIGUSR1);
+    kill(pid, SIGKILL);
     sem_close(sem);
     sem_unlink(name.c_str());
     clean_shm();
   }
 
+  void run() {
+    std::stringstream ss;
+
+    if ((pid = fork()) == 0) {
+      ss << '/' << getppid() << getpid() << static_cast<void*>(this);
+      name = ss.str();
+      sem = sem_open(name.c_str(), O_CREAT, 0600, 0);
+
+      sem_post(sem);
+
+      for (;;) {
+        sem_wait(sem);
+        recv_dict(inputs);
+        f(inputs, outputs);
+        send_dict(outputs);
+        sem_post(sem);
+      }
+    } else {
+      ss << '/' << getpid() << pid << static_cast<void*>(this);
+      name = ss.str();
+      sem = sem_open(name.c_str(), O_CREAT, 0600, 0);
+
+      sem_wait(sem);
+    }
+  }
+
  private:
   void send_dict(Dict& dict) {
-    std::string stat_name = name + ":stat";
-    std::string lens_name = name + ":lens";
-    std::string size_name = name + ":size";
-    std::string keys_name = name + ":keys";
-    std::string vals_name = name + ":vals";
+    std::string stat_name = name + "stat";
+    std::string lens_name = name + "lens";
+    std::string size_name = name + "size";
+    std::string keys_name = name + "keys";
+    std::string vals_name = name + "vals";
 
     int stat_fd = shm_open(stat_name.c_str(), O_CREAT | O_RDWR, 0600);
     ftruncate(stat_fd, sizeof(std::size_t));
@@ -122,11 +126,11 @@ class ForkComponent final : public IComponent {
   }
 
   void recv_dict(Dict& dict) {
-    std::string stat_name = name + ":stat";
-    std::string lens_name = name + ":lens";
-    std::string size_name = name + ":size";
-    std::string keys_name = name + ":keys";
-    std::string vals_name = name + ":vals";
+    std::string stat_name = name + "stat";
+    std::string lens_name = name + "lens";
+    std::string size_name = name + "size";
+    std::string keys_name = name + "keys";
+    std::string vals_name = name + "vals";
 
     int stat_fd = shm_open(stat_name.c_str(), O_RDWR);
     ftruncate(stat_fd, sizeof(std::size_t));
@@ -180,14 +184,16 @@ class ForkComponent final : public IComponent {
     close(size_fd);
     close(keys_fd);
     close(vals_fd);
+
+    clean_shm();
   }
 
   void clean_shm() {
-    std::string stat_name = name + ":stat";
-    std::string lens_name = name + ":lens";
-    std::string size_name = name + ":size";
-    std::string keys_name = name + ":keys";
-    std::string vals_name = name + ":vals";
+    std::string stat_name = name + "stat";
+    std::string lens_name = name + "lens";
+    std::string size_name = name + "size";
+    std::string keys_name = name + "keys";
+    std::string vals_name = name + "vals";
 
     shm_unlink(stat_name.c_str());
     shm_unlink(lens_name.c_str());
@@ -197,6 +203,31 @@ class ForkComponent final : public IComponent {
   }
 
  public:
+  void make_in_port(std::string name) {
+    inputs.try_emplace(name, Buffer());
+    in_ports.try_emplace(name, std::make_shared<Port<Buffer>>());
+  }
+
+  std::shared_ptr<Port<Buffer>>& get_in_port(std::string name) {
+    return in_ports.at(name);
+  }
+
+  void make_out_port(std::string name) {
+    outputs.try_emplace(name, Buffer());
+    out_ports.try_emplace(name, std::make_shared<Port<Buffer>>());
+  }
+
+  std::shared_ptr<Port<Buffer>>& get_out_port(std::string name) {
+    return out_ports.at(name);
+  }
+
+  Buffer& get_input(std::string name) { return inputs.at(name); }
+  Buffer& get_output(std::string name) { return outputs.at(name); }
+
+  void connect(ForkComponent& target, std::string out, std::string in) {
+    in_ports.at(in) = target.out_ports.at(out);
+  }
+
   void collect() {
     for (std::size_t i = 0; i < inputs.size(); ++i) {
       inputs.index(i) = in_ports.index(i)->get();
@@ -207,6 +238,7 @@ class ForkComponent final : public IComponent {
     send_dict(inputs);
     sem_post(sem);
     sem_wait(sem);
+    recv_dict(outputs);
   }
 
   void expose() {
@@ -216,6 +248,8 @@ class ForkComponent final : public IComponent {
   }
 
  private:
+  Functor f;
+
   std::string name;
   sem_t* sem;
   pid_t pid;

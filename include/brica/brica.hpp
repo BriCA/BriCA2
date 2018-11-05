@@ -27,6 +27,7 @@
 #include "brica/assocvec.hpp"
 #include "brica/buffer.hpp"
 #include "brica/component.hpp"
+#include "brica/fork.hpp"
 #include "brica/functor.hpp"
 #include "brica/port.hpp"
 #include "brica/scheduler.hpp"
