@@ -1,30 +1,16 @@
 import unittest
 
-import numpy as np
 import brica
 from brica import connect, Component
 
-key = 'default'
-value = np.array([1, 2, 3])
-
-
-def f_emit(inputs):
-    return {key: value}
-
-
-def f_pipe(inputs):
-    return inputs
-
-
-def f_null(inputs):
-    return {}
+from helpers import *
 
 
 class TestComponent(unittest.TestCase):
     def test_emit_pipe_null(self):
-        emit = Component(f_emit)
-        pipe = Component(f_pipe)
-        null = Component(f_null)
+        emit = Component("emit", f_emit)
+        pipe = Component("pipe", f_pipe)
+        null = Component("null", f_null)
 
         emit.make_out_port(key)
         pipe.make_in_port(key)

@@ -18,6 +18,8 @@ EMAIL = 'kotone@sfc.keio.ac.jp'
 AUTHOR = 'Kotone Itaya'
 VERSION = '0.2.3'
 
+SETUP_REQUIRED = ['pybind11>=2.2']
+
 headers = [
     'include/brica/assocvec.hpp',
     'include/brica/brica.hpp',
@@ -94,8 +96,8 @@ class get_pybind_include(object):
 
 ext_modules = [
     Extension(
-        'brica',
-        ['python/src/simple.cpp'],
+        '_brica',
+        ['src/python_bindings.cpp'],
         include_dirs=[
             # Path to pybind11 headers
             get_pybind_include(),
@@ -185,14 +187,18 @@ setup(
     author=AUTHOR,
     author_email=EMAIL,
     url=URL,
+    setup_requires=SETUP_REQUIRED,
+    packages=setuptools.find_packages(),
     ext_modules=ext_modules,
-    install_requires=['pybind11>=2.2'],
     license='Apache',
     headers=headers,
     cmdclass={
         'build_ext': BuildExt,
         'install_headers': InstallHeaders,
         'upload': UploadCommand,
+    },
+    entry_points={
+        'console_scripts': ['brica-pyproxy=brica.__main__:main'],
     },
     zip_safe=False,
 )

@@ -43,12 +43,10 @@ struct Timing {
   Time sleep;
 };
 
-static const std::function<void()> nop([]() {});
-
 class VirtualTimePhasedScheduler {
  public:
-  VirtualTimePhasedScheduler(std::size_t n = 0) : sync(nop), pool(n) {}
-  VirtualTimePhasedScheduler(std::function<void()> f = nop, std::size_t n = 0)
+  VirtualTimePhasedScheduler(std::size_t n = 0) : sync([]() {}), pool(n) {}
+  VirtualTimePhasedScheduler(std::function<void()> f, std::size_t n = 0)
       : sync(f), pool(n) {}
 
   void add_component(IComponent* component, std::size_t phase) {
