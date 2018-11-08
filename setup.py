@@ -16,7 +16,7 @@ DESCRIPTION = 'BriCA Version 2 Python bindings'
 URL = 'https://github.com/BriCA/BriCA2'
 EMAIL = 'kotone@sfc.keio.ac.jp'
 AUTHOR = 'Kotone Itaya'
-VERSION = '0.2.3'
+VERSION = '0.3.0'
 
 SETUP_REQUIRED = ['pybind11>=2.2']
 
