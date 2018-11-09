@@ -104,6 +104,8 @@ ext_modules = [
             get_pybind_include(user=True),
             # Path to BriCA headers
             "./include",
+            # Path to vendor headers
+            "./vendor/asio-1.12.1/include"
         ],
         language='c++'),
 ]
