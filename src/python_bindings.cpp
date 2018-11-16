@@ -168,7 +168,7 @@ void recv_dict(std::string name, brica::Dict& dict) {
   std::string keys_name = name + "keys";
   std::string vals_name = name + "vals";
 
-  int stat_fd = shm_open(stat_name.c_str(), O_RDWR);
+  int stat_fd = shm_open(stat_name.c_str(), O_RDWR, 0600);
   ftruncate(stat_fd, sizeof(std::size_t));
   std::size_t* stat_ptr = reinterpret_cast<std::size_t*>(mmap(
       0, sizeof(std::size_t), PROT_READ | PROT_WRITE, MAP_SHARED, stat_fd, 0));
