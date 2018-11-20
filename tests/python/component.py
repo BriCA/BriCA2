@@ -8,9 +8,9 @@ from helpers import *
 
 class TestComponent(unittest.TestCase):
     def test_emit_pipe_null(self):
-        emit = Component("emit", f_emit)
-        pipe = Component("pipe", f_pipe)
-        null = Component("null", f_null)
+        emit = Component(f_emit)
+        pipe = Component(f_pipe)
+        null = Component(f_null)
 
         emit.make_out_port(key)
         pipe.make_in_port(key)

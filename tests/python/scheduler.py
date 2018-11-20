@@ -8,9 +8,9 @@ from helpers import *
 
 class TestVirtualTimeScheduler(unittest.TestCase):
     def test_emit_pipe_null_scheduling(self):
-        emit = Component("emit", f_emit)
-        pipe = Component("pipe", f_pipe)
-        null = Component("null", f_null)
+        emit = Component(f_emit)
+        pipe = Component(f_pipe)
+        null = Component(f_null)
 
         emit.make_out_port(key)
         pipe.make_in_port(key)

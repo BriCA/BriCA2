@@ -11,10 +11,13 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include <sstream>
+#include <string>
+
 namespace py = pybind11;
 
 py::object to_object(brica::Buffer buffer) {
-  auto pickler = py::module::import("pickle");
+  auto pickler = py::module::import("dill");
   auto loads = pickler.attr("loads");
 
   if (buffer.size() > 0) {
@@ -26,7 +29,7 @@ py::object to_object(brica::Buffer buffer) {
 }
 
 void send_pickle(std::string name, py::object obj) {
-  auto pickler = py::module::import("pickle");
+  auto pickler = py::module::import("dill");
   auto dumps = pickler.attr("dumps");
   std::string pickle = py::bytes(dumps(obj));
 
@@ -48,6 +51,9 @@ void send_pickle(std::string name, py::object obj) {
                                                   PROT_READ | PROT_WRITE,
                                                   MAP_SHARED, pickle_fd, 0));
   std::copy(pickle.begin(), pickle.end(), pickle_ptr);
+
+  munmap(pickle_ptr, sizeof(char) * size);
+  munmap(length_ptr, sizeof(std::size_t));
 
   close(length_fd);
   close(pickle_fd);
@@ -73,13 +79,16 @@ py::object recv_pickle(std::string name) {
                                                   MAP_SHARED, pickle_fd, 0));
   std::string pickle(pickle_ptr, pickle_ptr + size);
 
+  munmap(pickle_ptr, sizeof(char) * size);
+  munmap(length_ptr, sizeof(std::size_t));
+
   close(length_fd);
   close(pickle_fd);
 
   shm_unlink(length_name.c_str());
   shm_unlink(pickle_name.c_str());
 
-  auto pickler = py::module::import("pickle");
+  auto pickler = py::module::import("dill");
   auto loads = pickler.attr("loads");
   return loads(py::bytes(pickle));
 }
@@ -154,6 +163,12 @@ void send_dict(std::string name, brica::Dict& dict) {
     vals_ptr += val.size();
   }
 
+  munmap(keys_ptr, sizeof(char) * keys_size);
+  munmap(vals_ptr, sizeof(char) * vals_size);
+  munmap(size_ptr, sizeof(std::size_t));
+  munmap(stat_ptr, sizeof(std::size_t));
+  munmap(lens_ptr, sizeof(std::size_t));
+
   close(stat_fd);
   close(lens_fd);
   close(size_fd);
@@ -214,6 +229,12 @@ void recv_dict(std::string name, brica::Dict& dict) {
     vals_ptr += size_ptr[i];
   }
 
+  munmap(keys_ptr, sizeof(char) * keys_size);
+  munmap(vals_ptr, sizeof(char) * vals_size);
+  munmap(size_ptr, sizeof(std::size_t));
+  munmap(stat_ptr, sizeof(std::size_t));
+  munmap(lens_ptr, sizeof(std::size_t));
+
   close(stat_fd);
   close(lens_fd);
   close(size_fd);
@@ -225,8 +246,12 @@ void recv_dict(std::string name, brica::Dict& dict) {
 
 class Component final : public brica::IComponent {
  public:
-  Component(std::string name, py::object f)
-      : name(name), sem(sem_open(name.c_str(), O_CREAT, 0600, 0)) {
+  Component(py::object f) {
+    std::stringstream ss;
+    ss << static_cast<void*>(this);
+    name = ss.str();
+
+    sem = sem_open(name.c_str(), O_CREAT, 0600, 0);
     send_pickle(name, f);
     if ((pid = fork()) == 0) {
       std::string cmd = "brica-pyproxy " + name;
@@ -243,7 +268,6 @@ class Component final : public brica::IComponent {
     clean_dict(name);
   }
 
- private:
  public:
   void make_in_port(std::string name) {
     inputs.try_emplace(name, brica::Buffer());
@@ -334,7 +358,7 @@ void proxy(std::string name) {
   sem_post(sem);
   sem_wait(sem);
 
-  auto pickler = py::module::import("pickle");
+  auto pickler = py::module::import("dill");
   auto dumps = pickler.attr("dumps");
   auto loads = pickler.attr("loads");
 
@@ -380,7 +404,7 @@ PYBIND11_MODULE(_brica, m) {
       .def("expose", &brica::IComponent::expose);
 
   py::class_<Component, brica::IComponent>(m, "Component")
-      .def(py::init<std::string, py::object>())
+      .def(py::init<py::object>())
       .def("make_in_port", &Component::make_in_port)
       .def("make_out_port", &Component::make_out_port)
       .def("get_in_port_value", &Component::get_in_port_value)

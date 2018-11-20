@@ -20,6 +20,8 @@ VERSION = '0.3.0'
 
 SETUP_REQUIRED = ['pybind11>=2.2']
 
+REQUIRED = ['dill']
+
 headers = [
     'include/brica/assocvec.hpp',
     'include/brica/brica.hpp',
@@ -190,6 +192,7 @@ setup(
     author_email=EMAIL,
     url=URL,
     setup_requires=SETUP_REQUIRED,
+    install_requires=REQUIRED,
     packages=setuptools.find_packages(),
     ext_modules=ext_modules,
     license='Apache',
