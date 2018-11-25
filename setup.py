@@ -16,7 +16,7 @@ DESCRIPTION = 'BriCA Version 2 Python bindings'
 URL = 'https://github.com/BriCA/BriCA2'
 EMAIL = 'kotone@sfc.keio.ac.jp'
 AUTHOR = 'Kotone Itaya'
-VERSION = '0.2.3'
+VERSION = '0.3.0'
 
 headers = [
     'include/brica/assocvec.hpp',
@@ -25,7 +25,9 @@ headers = [
     'include/brica/component.hpp',
     'include/brica/functor.hpp',
     'include/brica/mpi.hpp',
+    'include/brica/port.hpp',
     'include/brica/scheduler.hpp',
+    'include/brica/thread_pool.hpp',
 ]
 
 here = os.path.abspath(os.path.dirname(__file__))
@@ -92,10 +94,16 @@ class get_pybind_include(object):
         return pybind11.get_include(self.user)
 
 
+def posix_flag():
+    if sys.platform =='darwin':
+        return []
+    return ['rt']
+
+
 ext_modules = [
     Extension(
         'brica',
-        ['python/src/simple.cpp'],
+        ['src/python_bindings.cpp'],
         include_dirs=[
             # Path to pybind11 headers
             get_pybind_include(),
@@ -103,6 +111,7 @@ ext_modules = [
             # Path to BriCA headers
             "./include",
         ],
+        libraries=posix_flag(),
         language='c++'),
 ]
 
@@ -185,8 +194,9 @@ setup(
     author=AUTHOR,
     author_email=EMAIL,
     url=URL,
+    packages=find_packages(exclude=('tests',)),
     ext_modules=ext_modules,
-    install_requires=['pybind11>=2.2'],
+    install_requires=['pybind11>=2.2', 'pfifo>=1.0.7'],
     license='Apache',
     headers=headers,
     cmdclass={

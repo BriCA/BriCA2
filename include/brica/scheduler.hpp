@@ -21,8 +21,8 @@
  *
  *****************************************************************************/
 
-#ifndef __BRICA_KERNEL_SCHEDULER_HPP__
-#define __BRICA_KERNEL_SCHEDULER_HPP__
+#ifndef __BRICA_SCHEDULER_HPP__
+#define __BRICA_SCHEDULER_HPP__
 
 #include "brica/component.hpp"
 #include "brica/thread_pool.hpp"
@@ -47,8 +47,7 @@ static const std::function<void()> nop([]() {});
 
 class VirtualTimePhasedScheduler {
  public:
-  VirtualTimePhasedScheduler(std::size_t n = 0) : sync(nop), pool(n) {}
-  VirtualTimePhasedScheduler(std::function<void()> f = nop, std::size_t n = 0)
+  VirtualTimePhasedScheduler(std::size_t n = 0, std::function<void()> f = nop)
       : sync(f), pool(n) {}
 
   void add_component(IComponent* component, std::size_t phase) {
@@ -157,4 +156,4 @@ class VirtualTimeScheduler {
 
 }  // namespace brica
 
-#endif  // __BRICA_KERNEL_SCHEDULER_HPP__
+#endif  // __BRICA_SCHEDULER_HPP__

@@ -21,8 +21,8 @@
  *
  *****************************************************************************/
 
-#ifndef __BRICA_KERNEL_COMPONENT_HPP__
-#define __BRICA_KERNEL_COMPONENT_HPP__
+#ifndef __BRICA_COMPONENT_HPP__
+#define __BRICA_COMPONENT_HPP__
 
 #include "brica/assocvec.hpp"
 #include "brica/buffer.hpp"
@@ -121,4 +121,4 @@ void connect(C& target, std::string out, C& origin, std::string in) {
 
 }  // namespace brica
 
-#endif  // __BRICA_KERNEL_COMPONENT_HPP__
+#endif  // __BRICA_COMPONENT_HPP__

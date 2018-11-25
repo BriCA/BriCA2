@@ -21,8 +21,8 @@
  *
  *****************************************************************************/
 
-#ifndef __BRICA_KERNEL_ASSOCVEC_HPP__
-#define __BRICA_KERNEL_ASSOCVEC_HPP__
+#ifndef __BRICA_ASSOCVEC_HPP__
+#define __BRICA_ASSOCVEC_HPP__
 
 #include <algorithm>
 #include <functional>
@@ -118,6 +118,8 @@ class AssocVec {
   allocator_type get_allocator() const { return data.get_allocator(); }
 
   /* Accessors */
+  key_type& key(size_type pos) { return data.at(pos).first; }
+
   mapped_type& at(const key_type& key) {
     iterator lower = lower_bound(key);
     if (lower != end() && lower->first == key) {
@@ -346,4 +348,4 @@ class AssocVec {
 
 }  // namespace brica
 
-#endif  // __BRICA_KERNEL_ASSOCVEC_HPP__
+#endif  // __BRICA_ASSOCVEC_HPP__

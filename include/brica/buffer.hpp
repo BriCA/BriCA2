@@ -21,8 +21,8 @@
  *
  *****************************************************************************/
 
-#ifndef __BRICA_KERNEL_BUFFER_HPP__
-#define __BRICA_KERNEL_BUFFER_HPP__
+#ifndef __BRICA_BUFFER_HPP__
+#define __BRICA_BUFFER_HPP__
 
 #include <memory>
 #include <vector>
@@ -53,9 +53,13 @@ class Buffer {
       : ptr(std::make_shared<vector_type>(count, value)) {}
   explicit Buffer(size_type count)
       : ptr(std::make_shared<vector_type>(count)) {}
+  template <class InputIt>
+  Buffer(InputIt first, InputIt last)
+      : ptr(std::make_shared<vector_type>(first, last)) {}
   Buffer(const Buffer& other) : ptr(other.ptr) {}
   Buffer(Buffer&& other) : ptr(other.ptr) { other.ptr = nullptr; }
   Buffer(ilist_type init) : ptr(std::make_shared<vector_type>(init)) {}
+  Buffer(vector_type v) : ptr(std::make_shared<vector_type>(v)) {}
   ~Buffer() {}
 
   Buffer& operator=(const Buffer& other) { return *this = Buffer(other); }
@@ -205,4 +209,4 @@ class Buffer {
 
 }  // namespace brica
 
-#endif  // __BRICA_KERNEL_BUFFER_HPP__
+#endif  // __BRICA_BUFFER_HPP__

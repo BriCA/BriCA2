@@ -1,11 +1,11 @@
 import unittest
 
-import numpy as np
 import brica
 from brica import connect, Component, Timing, VirtualTimeScheduler
 
+
 key = 'default'
-value = np.array([1, 2, 3])
+value = [1, 2, 3]
 
 
 def f_emit(inputs):
@@ -20,7 +20,7 @@ def f_null(inputs):
     return {}
 
 
-class TestComponent(unittest.TestCase):
+class TestVirtualTimeScheduler(unittest.TestCase):
     def test_emit_pipe_null_scheduling(self):
         emit = Component(f_emit)
         pipe = Component(f_pipe)
@@ -55,7 +55,7 @@ class TestComponent(unittest.TestCase):
 
         s.step()
 
-        self.assertTrue((emit.get_output(key) == value).all())
+        self.assertTrue((emit.get_output(key) == value))
         self.assertTrue(emit.get_out_port_value(key) == None)
 
         self.assertTrue(pipe.get_input(key) == None)
@@ -69,13 +69,13 @@ class TestComponent(unittest.TestCase):
 
         s.step()
 
-        self.assertTrue((emit.get_output(key) == value).all())
-        self.assertTrue((emit.get_out_port_value(key) == value).all())
+        self.assertTrue((emit.get_output(key) == value))
+        self.assertTrue((emit.get_out_port_value(key) == value))
 
-        self.assertTrue((pipe.get_input(key) == value).all())
-        self.assertTrue((pipe.get_in_port_value(key) == value).all())
+        self.assertTrue((pipe.get_input(key) == value))
+        self.assertTrue((pipe.get_in_port_value(key) == value))
 
-        self.assertTrue((pipe.get_output(key) == value).all())
+        self.assertTrue((pipe.get_output(key) == value))
         self.assertTrue(pipe.get_out_port_value(key) == None)
 
         self.assertTrue(null.get_input(key) == None)
@@ -83,17 +83,17 @@ class TestComponent(unittest.TestCase):
 
         s.step()
 
-        self.assertTrue((emit.get_output(key) == value).all())
-        self.assertTrue((emit.get_out_port_value(key) == value).all())
+        self.assertTrue((emit.get_output(key) == value))
+        self.assertTrue((emit.get_out_port_value(key) == value))
 
-        self.assertTrue((pipe.get_input(key) == value).all())
-        self.assertTrue((pipe.get_in_port_value(key) == value).all())
+        self.assertTrue((pipe.get_input(key) == value))
+        self.assertTrue((pipe.get_in_port_value(key) == value))
 
-        self.assertTrue((pipe.get_output(key) == value).all())
-        self.assertTrue((pipe.get_out_port_value(key) == value).all())
+        self.assertTrue((pipe.get_output(key) == value))
+        self.assertTrue((pipe.get_out_port_value(key) == value))
 
-        self.assertTrue((null.get_input(key) == value).all())
-        self.assertTrue((null.get_in_port_value(key) == value).all())
+        self.assertTrue((null.get_input(key) == value))
+        self.assertTrue((null.get_in_port_value(key) == value))
 
 
 if __name__ == '__main__':

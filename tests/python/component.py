@@ -1,11 +1,11 @@
 import unittest
 
-import numpy as np
 import brica
 from brica import connect, Component
 
+
 key = 'default'
-value = np.array([1, 2, 3])
+value = [1, 2, 3]
 
 
 def f_emit(inputs):
@@ -58,7 +58,7 @@ class TestComponent(unittest.TestCase):
         execute()
         expose()
 
-        self.assertTrue((emit.get_output(key) == value).all())
+        self.assertTrue((emit.get_output(key) == value))
         self.assertTrue(pipe.get_input(key) is None)
         self.assertTrue(pipe.get_output(key) is None)
         self.assertTrue(null.get_input(key) is None)
@@ -67,19 +67,19 @@ class TestComponent(unittest.TestCase):
         execute()
         expose()
 
-        self.assertTrue((emit.get_output(key) == value).all())
-        self.assertTrue((pipe.get_input(key) == value).all())
-        self.assertTrue((pipe.get_output(key) == value).all())
+        self.assertTrue((emit.get_output(key) == value))
+        self.assertTrue((pipe.get_input(key) == value))
+        self.assertTrue((pipe.get_output(key) == value))
         self.assertTrue(null.get_input(key) is None)
 
         collect()
         execute()
         expose()
 
-        self.assertTrue((emit.get_output(key) == value).all())
-        self.assertTrue((pipe.get_input(key) == value).all())
-        self.assertTrue((pipe.get_output(key) == value).all())
-        self.assertTrue((null.get_input(key) == value).all())
+        self.assertTrue((emit.get_output(key) == value))
+        self.assertTrue((pipe.get_input(key) == value))
+        self.assertTrue((pipe.get_output(key) == value))
+        self.assertTrue((null.get_input(key) == value))
 
 
 if __name__ == '__main__':
