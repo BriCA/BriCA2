@@ -11,9 +11,9 @@ def recv_dict(r):
     while len(key):
         val = r.read()
         if len(val):
-            d[key] = ForkingPickler.loads(val)
+            d[key.decode()] = ForkingPickler.loads(val)
         else:
-            d[key] = None
+            d[key.decode()] = None
         key = r.read()
 
     return d
