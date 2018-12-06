@@ -196,7 +196,7 @@ setup(
     url=URL,
     packages=find_packages(exclude=('tests',)),
     ext_modules=ext_modules,
-    install_requires=['pybind11>=2.2', 'pfifo>=1.1.3'],
+    install_requires=['pybind11>=2.2', 'pfifo>=1.1.6'],
     license='Apache',
     headers=headers,
     cmdclass={
