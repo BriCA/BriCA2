@@ -110,6 +110,8 @@ ext_modules = [
             get_pybind_include(user=True),
             # Path to BriCA headers
             "./include",
+            # Path to vendored ASIO standalone
+            "./vendor/asio-1.12.1/include"
         ],
         libraries=posix_flag(),
         language='c++'),

@@ -1,2 +1,3 @@
-recursive-include include/brica *.hpp
+recursive-include include/brica *.hppasio
+recursive-include vendor/asio-1.12.1/include *
 include LICENSE README.md
