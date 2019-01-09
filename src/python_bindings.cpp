@@ -43,7 +43,7 @@ class Component final : public brica::IComponent {
   }
 
   virtual ~Component() {
-    writer->write("");
+    writer->write("0");
     delete reader;
     delete writer;
   }
@@ -110,6 +110,14 @@ class Component final : public brica::IComponent {
     return py::none();
   }
 
+  py::object get_object() {
+    py::module reduction = py::module::import("multiprocessing.reduction");
+    py::object pickle = reduction.attr("ForkingPickler");
+    writer->write("2");
+    std::string s = reader->reads();
+    return pickle.attr("loads")(py::bytes(s));
+  }
+
   void connect(Component& target, std::string out, std::string in) {
     in_ports.at(in) = target.out_ports.at(out);
   }
@@ -121,7 +129,7 @@ class Component final : public brica::IComponent {
   }
 
   void execute() {
-    writer->write("call");
+    writer->write("1");
     send_dict(writer, inputs);
     recv_dict(reader, outputs);
   }
@@ -157,7 +165,8 @@ PYBIND11_MODULE(brica, m) {
       .def("get_in_port_value", &Component::get_in_port_value)
       .def("get_out_port_value", &Component::get_out_port_value)
       .def("get_input", &Component::get_input)
-      .def("get_output", &Component::get_output);
+      .def("get_output", &Component::get_output)
+      .def("get_object", &Component::get_object);
 
   m.def("connect", &brica::connect<Component>);
 

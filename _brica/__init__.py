@@ -31,10 +31,17 @@ def run(name, f):
     w = Writer(name + 'p', 0o644)
     r = Reader(name + 'c', 0o644)
 
-    while len(r.read()):
-        inputs = recv_dict(r)
-        outputs = f(inputs)
-        send_dict(w, outputs)
+    msg = chr(r.read()[0])
+
+    while msg != '0':
+        if msg == '1':
+            inputs = recv_dict(r)
+            outputs = f(inputs)
+            send_dict(w, outputs)
+        if msg == '2':
+            s = bytes(ForkingPickler.dumps(f))
+            w.write(s)
+        msg = chr(r.read()[0])
 
 
 class Dispatcher(object):
