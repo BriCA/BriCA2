@@ -125,7 +125,7 @@ class AssocVec {
     if (lower != end() && lower->first == key) {
       return lower->second;
     }
-    throw std::out_of_range("AssocVec");
+    throw std::out_of_range("AssocVec: " + key);
   }
 
   const mapped_type& at(const key_type& key) const { return at(key); }
