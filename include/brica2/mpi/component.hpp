@@ -11,11 +11,6 @@
 NAMESPACE_BEGIN(BRICA2_NAMESPACE)
 NAMESPACE_BEGIN(mpi)
 
-struct scoped_instance {
-  scoped_instance(int& argc, char* argv[]) { MPI_Init(&argc, &argv); }
-  virtual ~scoped_instance() { MPI_Finalize(); }
-};
-
 class component : public basic_component {
  public:
   explicit component(
@@ -51,10 +46,10 @@ struct singular_io {
   virtual port& get_out_port() = 0;
 };
 
-template <class T, class S = std::initializer_list<ssize_t>>
-class proxy : public component_type, public singular_io {
+template <class T> class proxy : public component_type, public singular_io {
  public:
-  proxy(S&& s, int src, int dest, int tag, MPI_Comm comm = MPI_COMM_WORLD)
+  template <class S = std::initializer_list<ssize_t>>
+  proxy(S&& s, int src, int dest, int tag = 0, MPI_Comm comm = MPI_COMM_WORLD)
       : src(src),
         dest(dest),
         tag(tag),
