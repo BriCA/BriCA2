@@ -12,6 +12,7 @@
 #include <numeric>
 #include <vector>
 
+#include <cstdlib>
 #include <cstring>
 
 NAMESPACE_BEGIN(BRICA2_NAMESPACE)
@@ -85,7 +86,7 @@ class buffer {
             std::distance(first, last),
             {first, last},
             detail::default_strides<T>(first, last),
-            malloc(sizeof(T) * detail::product(first, last))})) {}
+            std::malloc(sizeof(T) * detail::product(first, last))})) {}
 
  private:
   void reset(buffer_info* ptr) { info.reset(ptr); }
@@ -165,7 +166,7 @@ inline buffer empty_like(const buffer& other) {
                              info.ndim,
                              info.shape,
                              info.strides,
-                             malloc(size)};
+                             std::malloc(size)};
   ret.reset(ptr);
   return ret;
 }
