@@ -101,7 +101,7 @@ template <class Span, bool IsConst> class span_iterator {
   }
 
   constexpr span_iterator& operator+=(difference_type n) {
-    Expects(0 <= (index + n) && (index + n) <= span_->size());
+    Expects(0 <= (index_ + n) && (index_ + n) <= span_->size());
     index_ += n;
     return *this;
   }

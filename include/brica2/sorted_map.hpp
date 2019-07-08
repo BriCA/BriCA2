@@ -7,6 +7,35 @@
 #include <vector>
 
 NAMESPACE_BEGIN(BRICA2_NAMESPACE)
+NAMESPACE_BEGIN(detail)
+
+template <class C, bool> struct brace_impl;
+
+template <class C> struct brace_impl<C, true> {
+  using key_type = typename C::key_type;
+  using mapped_type = typename C::mapped_type;
+
+  static mapped_type& op(C& map, const key_type& key) {
+    return map.try_emplace(key).first->second;
+  }
+
+  static mapped_type& op(C& map, key_type&& key) {
+    return map.try_emplace(key).first->second;
+  }
+};
+
+template <class C> struct brace_impl<C, false> {
+  using key_type = typename C::key_type;
+  using mapped_type = typename C::mapped_type;
+
+  static mapped_type& op(C& map, const key_type& key) {
+    return map.at(key);
+  }
+
+  static mapped_type& op(C& map, key_type&& key) { return map.at(key); }
+};
+
+NAMESPACE_END(detail)
 
 template <
     class Key,
@@ -126,32 +155,16 @@ class sorted_map {
   mapped_type& index(size_type pos) { return data.at(pos).second; }
   const mapped_type& index(size_type pos) const { return data.at(pos).second; }
 
- private:
-  template <bool> mapped_type& brace_impl(const key_type& key);
-  template <bool> mapped_type& brace_impl(key_type&& key);
-
-  template <> mapped_type& brace_impl<true>(const key_type& key) {
-    return this->try_emplace(key).first->second;
-  }
-
-  template <> mapped_type& brace_impl<true>(key_type&& key) {
-    return this->try_emplace(key).first->second;
-  }
-
-  template <> mapped_type& brace_impl<false>(const key_type& key) {
-    return at(key);
-  }
-
-  template <> mapped_type& brace_impl<false>(key_type&& key) { return at(key); }
-
- public:
   mapped_type& operator[](const key_type& key) {
-    return brace_impl<std::is_default_constructible<T>::value>(key);
+    return detail::
+        brace_impl<sorted_map, std::is_default_constructible<T>::value>::op(
+            *this, key);
   }
 
   mapped_type& operator[](key_type&& key) {
-    return brace_impl<std::is_default_constructible<T>::value>(
-        std::forward<key_type>(key));
+    return detail::
+        brace_impl<sorted_map, std::is_default_constructible<T>::value>::op(
+            *this, std::forward<key_type>(key));
   }
 
   const mapped_type& operator[](const key_type& key) const { return at(key); }

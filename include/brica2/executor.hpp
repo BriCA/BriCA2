@@ -36,12 +36,12 @@ inline auto default_concurrency() -> decltype(auto) {
   return value == 0 ? 1 : value;
 }
 
-class thread_pool : public executor_type {
+class thread_parallel : public executor_type {
  public:
-  thread_pool(std::size_t n = default_concurrency())
+  thread_parallel(std::size_t n = default_concurrency())
       : pool(n), count(0), total(0) {}
 
-  virtual ~thread_pool() { pool.join(); }
+  virtual ~thread_parallel() { pool.join(); }
 
   virtual void post_impl(std::vector<std::function<void(void)>>& fs) override {
     total += fs.size();

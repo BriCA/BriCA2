@@ -23,7 +23,7 @@ template <class Executor> class mpi_executor : public Executor {
 };
 
 using serial = mpi_executor<brica2::serial>;
-using thread_pool = mpi_executor<brica2::thread_pool>;
+using thread_parallel = mpi_executor<brica2::thread_parallel>;
 
 NAMESPACE_END(mpi)
 NAMESPACE_END(BRICA2_NAMESPACE)

@@ -17,8 +17,8 @@ TEST_CASE("serial executor", "[serial]") {
   REQUIRE(diff.count() == 3);
 }
 
-TEST_CASE("thread pool executor", "[thread_pool][!mayfail]") {
-  brica2::thread_pool exec;
+TEST_CASE("thread pool executor", "[thread_parallel][!mayfail]") {
+  brica2::thread_parallel exec;
 
   auto sleep = [] { std::this_thread::sleep_for(chrono::milliseconds(1)); };
   auto start = chrono::steady_clock::now();
