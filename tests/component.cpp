@@ -1,75 +1,109 @@
-#include "brica/brica.hpp"
 #include "catch.hpp"
+#include "brica2/component.hpp"
 
-using namespace brica;
+#include <algorithm>
+#include <vector>
+#include <cstring>
 
-TEST_CASE("emit/pipe/null component chain", "[component]") {
+inline bool equal(const brica2::buffer& lhs, const brica2::buffer& rhs) {
+  if (!compatible(lhs, rhs)) return false;
+  auto lspan = lhs.as_span<float>();
+  auto rspan = rhs.as_span<float>();
+  return std::equal(lspan.begin(), lspan.end(), rspan.begin());
+}
+
+TEST_CASE("constant/identity/discard component chain", "[component]") {
   std::string key = "default";
-  Buffer value({1, 2, 3});
+  std::vector<brica2::ssize_t> shape({3});
+  auto zeros = brica2::fill<float>(shape, 0);
+  auto value = brica2::with<float>({1, 2, 3}, shape);
 
-  auto f_emit = [key, value](Dict& in, Dict& out) { out[key] = value; };
-  auto f_pipe = [key](Dict& in, Dict& out) { out[key] = in[key]; };
-  auto f_null = [](Dict& in, Dict& out) {};
+  brica2::functor_type constant =
+      [key, value](const auto& inputs, auto& outputs) { outputs[key] = value; };
+  brica2::functor_type identity = [key](const auto& inputs, auto& outputs) {
+    outputs[key] = inputs[key];
+  };
+  brica2::functor_type discard = [](const auto& inputs, auto& outputs) {};
 
-  Component emit(f_emit);
-  Component pipe(f_pipe);
-  Component null(f_null);
+  brica2::component c1(constant);
+  brica2::component c2(identity);
+  brica2::component c3(discard);
 
-  emit.make_out_port(key);
-  pipe.make_in_port(key);
-  pipe.make_out_port(key);
-  null.make_in_port(key);
+  c1.make_out_port<float>(key, shape);
+  c2.make_in_port<float>(key, shape);
+  c2.make_out_port<float>(key, shape);
+  c3.make_in_port<float>(key, shape);
 
-  connect(emit, key, pipe, key);
-  connect(pipe, key, null, key);
+  brica2::connect({c1, key}, {c2, key});
+  brica2::connect({c2, key}, {c3, key});
 
   auto collect = [&]() {
-    emit.collect();
-    pipe.collect();
-    null.collect();
+    c1.collect();
+    c2.collect();
+    c3.collect();
   };
 
   auto execute = [&]() {
-    emit.execute();
-    pipe.execute();
-    null.execute();
+    c1.execute();
+    c2.execute();
+    c3.execute();
   };
 
   auto expose = [&]() {
-    emit.expose();
-    pipe.expose();
-    null.expose();
+    c1.expose();
+    c2.expose();
+    c3.expose();
   };
 
-  REQUIRE(emit.get_output(key).empty());
-  REQUIRE(pipe.get_input(key).empty());
-  REQUIRE(pipe.get_output(key).empty());
-  REQUIRE(null.get_input(key).empty());
+  CHECK(equal(c1.get_output(key), zeros));
+  CHECK(equal(c2.get_input(key), zeros));
+  CHECK(equal(c2.get_output(key), zeros));
+  CHECK(equal(c3.get_input(key), zeros));
+
+  CHECK(equal(c1.get_out_port(key).get(), zeros));
+  CHECK(equal(c2.get_in_port(key).get(), zeros));
+  CHECK(equal(c2.get_out_port(key).get(), zeros));
+  CHECK(equal(c3.get_in_port(key).get(), zeros));
 
   collect();
   execute();
   expose();
 
-  REQUIRE(value == emit.get_output(key));
-  REQUIRE(pipe.get_input(key).empty());
-  REQUIRE(pipe.get_output(key).empty());
-  REQUIRE(null.get_input(key).empty());
+  CHECK(equal(c1.get_output(key), value));
+  CHECK(equal(c2.get_input(key), zeros));
+  CHECK(equal(c2.get_output(key), zeros));
+  CHECK(equal(c3.get_input(key), zeros));
+
+  CHECK(equal(c1.get_out_port(key).get(), value));
+  CHECK(equal(c2.get_in_port(key).get(), value));
+  CHECK(equal(c2.get_out_port(key).get(), zeros));
+  CHECK(equal(c3.get_in_port(key).get(), zeros));
 
   collect();
   execute();
   expose();
 
-  REQUIRE(value == emit.get_output(key));
-  REQUIRE(value == pipe.get_input(key));
-  REQUIRE(value == pipe.get_output(key));
-  REQUIRE(null.get_input(key).empty());
+  CHECK(equal(c1.get_output(key), value));
+  CHECK(equal(c2.get_input(key), value));
+  CHECK(equal(c2.get_output(key), value));
+  CHECK(equal(c3.get_input(key), zeros));
+
+  CHECK(equal(c1.get_out_port(key).get(), value));
+  CHECK(equal(c2.get_in_port(key).get(), value));
+  CHECK(equal(c2.get_out_port(key).get(), value));
+  CHECK(equal(c3.get_in_port(key).get(), value));
 
   collect();
   execute();
   expose();
 
-  REQUIRE(value == emit.get_output(key));
-  REQUIRE(value == pipe.get_input(key));
-  REQUIRE(value == pipe.get_output(key));
-  REQUIRE(value == null.get_input(key));
+  CHECK(equal(c1.get_output(key), value));
+  CHECK(equal(c2.get_input(key), value));
+  CHECK(equal(c2.get_output(key), value));
+  CHECK(equal(c3.get_input(key), value));
+
+  CHECK(equal(c1.get_out_port(key).get(), value));
+  CHECK(equal(c2.get_in_port(key).get(), value));
+  CHECK(equal(c2.get_out_port(key).get(), value));
+  CHECK(equal(c3.get_in_port(key).get(), value));
 }

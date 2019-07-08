@@ -103,9 +103,10 @@ CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
 am__installdirs = "$(DESTDIR)$(noinst_bindir)"
 PROGRAMS = $(noinst_bin_PROGRAMS)
-am_brica_test_OBJECTS = brica_test-assocvec.$(OBJEXT) \
-	brica_test-component.$(OBJEXT) brica_test-scheduler.$(OBJEXT) \
-	brica_test-main.$(OBJEXT)
+am_brica_test_OBJECTS = brica_test-type_traits.$(OBJEXT) \
+	brica_test-sorted_map.$(OBJEXT) brica_test-buffer.$(OBJEXT) \
+	brica_test-executor.$(OBJEXT) brica_test-component.$(OBJEXT) \
+	brica_test-scheduler.$(OBJEXT) brica_test-main.$(OBJEXT)
 brica_test_OBJECTS = $(am_brica_test_OBJECTS)
 brica_test_LDADD = $(LDADD)
 AM_V_P = $(am__v_P_@AM_V@)
@@ -123,10 +124,13 @@ am__v_at_1 =
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__maybe_remake_depfiles = depfiles
-am__depfiles_remade = ./$(DEPDIR)/brica_test-assocvec.Po \
+am__depfiles_remade = ./$(DEPDIR)/brica_test-buffer.Po \
 	./$(DEPDIR)/brica_test-component.Po \
+	./$(DEPDIR)/brica_test-executor.Po \
 	./$(DEPDIR)/brica_test-main.Po \
-	./$(DEPDIR)/brica_test-scheduler.Po
+	./$(DEPDIR)/brica_test-scheduler.Po \
+	./$(DEPDIR)/brica_test-sorted_map.Po \
+	./$(DEPDIR)/brica_test-type_traits.Po
 am__mv = mv -f
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
@@ -197,7 +201,7 @@ ECHO_T = @ECHO_T@
 EGREP = @EGREP@
 EXEEXT = @EXEEXT@
 GREP = @GREP@
-HAVE_CXX11 = @HAVE_CXX11@
+HAVE_CXX14 = @HAVE_CXX14@
 INSTALL = @INSTALL@
 INSTALL_DATA = @INSTALL_DATA@
 INSTALL_PROGRAM = @INSTALL_PROGRAM@
@@ -266,10 +270,13 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 noinst_bindir = $(top_builddir)/tests
-brica_test_SOURCES = assocvec.cpp \
-		     component.cpp \
-		     scheduler.cpp \
-		     main.cpp
+brica_test_SOURCES = type_traits.cpp \
+                     sorted_map.cpp \
+                     buffer.cpp \
+                     executor.cpp \
+                     component.cpp \
+                     scheduler.cpp \
+                     main.cpp
 
 brica_test_CPPFLAGS = -I$(top_srcdir)/include
 all: all-am
@@ -358,10 +365,13 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/brica_test-assocvec.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/brica_test-buffer.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/brica_test-component.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/brica_test-executor.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/brica_test-main.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/brica_test-scheduler.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/brica_test-sorted_map.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/brica_test-type_traits.Po@am__quote@ # am--include-marker
 
 $(am__depfiles_remade):
 	@$(MKDIR_P) $(@D)
@@ -383,19 +393,61 @@ am--depfiles: $(am__depfiles_remade)
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXXCOMPILE) -c -o $@ `$(CYGPATH_W) '$<'`
 
-brica_test-assocvec.o: assocvec.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(brica_test_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT brica_test-assocvec.o -MD -MP -MF $(DEPDIR)/brica_test-assocvec.Tpo -c -o brica_test-assocvec.o `test -f 'assocvec.cpp' || echo '$(srcdir)/'`assocvec.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/brica_test-assocvec.Tpo $(DEPDIR)/brica_test-assocvec.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='assocvec.cpp' object='brica_test-assocvec.o' libtool=no @AMDEPBACKSLASH@
+brica_test-type_traits.o: type_traits.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(brica_test_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT brica_test-type_traits.o -MD -MP -MF $(DEPDIR)/brica_test-type_traits.Tpo -c -o brica_test-type_traits.o `test -f 'type_traits.cpp' || echo '$(srcdir)/'`type_traits.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/brica_test-type_traits.Tpo $(DEPDIR)/brica_test-type_traits.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='type_traits.cpp' object='brica_test-type_traits.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(brica_test_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o brica_test-assocvec.o `test -f 'assocvec.cpp' || echo '$(srcdir)/'`assocvec.cpp
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(brica_test_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o brica_test-type_traits.o `test -f 'type_traits.cpp' || echo '$(srcdir)/'`type_traits.cpp
 
-brica_test-assocvec.obj: assocvec.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(brica_test_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT brica_test-assocvec.obj -MD -MP -MF $(DEPDIR)/brica_test-assocvec.Tpo -c -o brica_test-assocvec.obj `if test -f 'assocvec.cpp'; then $(CYGPATH_W) 'assocvec.cpp'; else $(CYGPATH_W) '$(srcdir)/assocvec.cpp'; fi`
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/brica_test-assocvec.Tpo $(DEPDIR)/brica_test-assocvec.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='assocvec.cpp' object='brica_test-assocvec.obj' libtool=no @AMDEPBACKSLASH@
+brica_test-type_traits.obj: type_traits.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(brica_test_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT brica_test-type_traits.obj -MD -MP -MF $(DEPDIR)/brica_test-type_traits.Tpo -c -o brica_test-type_traits.obj `if test -f 'type_traits.cpp'; then $(CYGPATH_W) 'type_traits.cpp'; else $(CYGPATH_W) '$(srcdir)/type_traits.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/brica_test-type_traits.Tpo $(DEPDIR)/brica_test-type_traits.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='type_traits.cpp' object='brica_test-type_traits.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(brica_test_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o brica_test-assocvec.obj `if test -f 'assocvec.cpp'; then $(CYGPATH_W) 'assocvec.cpp'; else $(CYGPATH_W) '$(srcdir)/assocvec.cpp'; fi`
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(brica_test_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o brica_test-type_traits.obj `if test -f 'type_traits.cpp'; then $(CYGPATH_W) 'type_traits.cpp'; else $(CYGPATH_W) '$(srcdir)/type_traits.cpp'; fi`
+
+brica_test-sorted_map.o: sorted_map.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(brica_test_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT brica_test-sorted_map.o -MD -MP -MF $(DEPDIR)/brica_test-sorted_map.Tpo -c -o brica_test-sorted_map.o `test -f 'sorted_map.cpp' || echo '$(srcdir)/'`sorted_map.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/brica_test-sorted_map.Tpo $(DEPDIR)/brica_test-sorted_map.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='sorted_map.cpp' object='brica_test-sorted_map.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(brica_test_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o brica_test-sorted_map.o `test -f 'sorted_map.cpp' || echo '$(srcdir)/'`sorted_map.cpp
+
+brica_test-sorted_map.obj: sorted_map.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(brica_test_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT brica_test-sorted_map.obj -MD -MP -MF $(DEPDIR)/brica_test-sorted_map.Tpo -c -o brica_test-sorted_map.obj `if test -f 'sorted_map.cpp'; then $(CYGPATH_W) 'sorted_map.cpp'; else $(CYGPATH_W) '$(srcdir)/sorted_map.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/brica_test-sorted_map.Tpo $(DEPDIR)/brica_test-sorted_map.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='sorted_map.cpp' object='brica_test-sorted_map.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(brica_test_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o brica_test-sorted_map.obj `if test -f 'sorted_map.cpp'; then $(CYGPATH_W) 'sorted_map.cpp'; else $(CYGPATH_W) '$(srcdir)/sorted_map.cpp'; fi`
+
+brica_test-buffer.o: buffer.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(brica_test_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT brica_test-buffer.o -MD -MP -MF $(DEPDIR)/brica_test-buffer.Tpo -c -o brica_test-buffer.o `test -f 'buffer.cpp' || echo '$(srcdir)/'`buffer.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/brica_test-buffer.Tpo $(DEPDIR)/brica_test-buffer.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='buffer.cpp' object='brica_test-buffer.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(brica_test_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o brica_test-buffer.o `test -f 'buffer.cpp' || echo '$(srcdir)/'`buffer.cpp
+
+brica_test-buffer.obj: buffer.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(brica_test_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT brica_test-buffer.obj -MD -MP -MF $(DEPDIR)/brica_test-buffer.Tpo -c -o brica_test-buffer.obj `if test -f 'buffer.cpp'; then $(CYGPATH_W) 'buffer.cpp'; else $(CYGPATH_W) '$(srcdir)/buffer.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/brica_test-buffer.Tpo $(DEPDIR)/brica_test-buffer.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='buffer.cpp' object='brica_test-buffer.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(brica_test_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o brica_test-buffer.obj `if test -f 'buffer.cpp'; then $(CYGPATH_W) 'buffer.cpp'; else $(CYGPATH_W) '$(srcdir)/buffer.cpp'; fi`
+
+brica_test-executor.o: executor.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(brica_test_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT brica_test-executor.o -MD -MP -MF $(DEPDIR)/brica_test-executor.Tpo -c -o brica_test-executor.o `test -f 'executor.cpp' || echo '$(srcdir)/'`executor.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/brica_test-executor.Tpo $(DEPDIR)/brica_test-executor.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='executor.cpp' object='brica_test-executor.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(brica_test_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o brica_test-executor.o `test -f 'executor.cpp' || echo '$(srcdir)/'`executor.cpp
+
+brica_test-executor.obj: executor.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(brica_test_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT brica_test-executor.obj -MD -MP -MF $(DEPDIR)/brica_test-executor.Tpo -c -o brica_test-executor.obj `if test -f 'executor.cpp'; then $(CYGPATH_W) 'executor.cpp'; else $(CYGPATH_W) '$(srcdir)/executor.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/brica_test-executor.Tpo $(DEPDIR)/brica_test-executor.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='executor.cpp' object='brica_test-executor.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(brica_test_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o brica_test-executor.obj `if test -f 'executor.cpp'; then $(CYGPATH_W) 'executor.cpp'; else $(CYGPATH_W) '$(srcdir)/executor.cpp'; fi`
 
 brica_test-component.o: component.cpp
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(brica_test_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT brica_test-component.o -MD -MP -MF $(DEPDIR)/brica_test-component.Tpo -c -o brica_test-component.o `test -f 'component.cpp' || echo '$(srcdir)/'`component.cpp
@@ -566,10 +618,13 @@ clean: clean-am
 clean-am: clean-generic clean-noinst_binPROGRAMS mostlyclean-am
 
 distclean: distclean-am
-		-rm -f ./$(DEPDIR)/brica_test-assocvec.Po
+		-rm -f ./$(DEPDIR)/brica_test-buffer.Po
 	-rm -f ./$(DEPDIR)/brica_test-component.Po
+	-rm -f ./$(DEPDIR)/brica_test-executor.Po
 	-rm -f ./$(DEPDIR)/brica_test-main.Po
 	-rm -f ./$(DEPDIR)/brica_test-scheduler.Po
+	-rm -f ./$(DEPDIR)/brica_test-sorted_map.Po
+	-rm -f ./$(DEPDIR)/brica_test-type_traits.Po
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
 	distclean-tags
@@ -615,10 +670,13 @@ install-ps-am:
 installcheck-am:
 
 maintainer-clean: maintainer-clean-am
-		-rm -f ./$(DEPDIR)/brica_test-assocvec.Po
+		-rm -f ./$(DEPDIR)/brica_test-buffer.Po
 	-rm -f ./$(DEPDIR)/brica_test-component.Po
+	-rm -f ./$(DEPDIR)/brica_test-executor.Po
 	-rm -f ./$(DEPDIR)/brica_test-main.Po
 	-rm -f ./$(DEPDIR)/brica_test-scheduler.Po
+	-rm -f ./$(DEPDIR)/brica_test-sorted_map.Po
+	-rm -f ./$(DEPDIR)/brica_test-type_traits.Po
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic
 

@@ -1,0 +1,13 @@
+BasedOnStyle: Google
+ColumnLimit: 80
+DerivePointerAlignment: false
+PointerAlignment: Left
+
+AlignAfterOpenBracket: AlwaysBreak
+BinPackArguments: false
+BinPackParameters: false
+
+AlwaysBreakTemplateDeclarations: false
+
+IncludeBlocks: Regroup
+SortIncludes: false

@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.69])
-AC_INIT([brica], [2.0.0], [kotone {at} sfc.keio.ac.jp])
+AC_INIT([brica2], [1.0.0], [kotone {at} sfc.keio.ac.jp])
 AM_INIT_AUTOMAKE([foreign])
 AC_CONFIG_SRCDIR([include/catch.hpp])
 AC_CONFIG_HEADERS([config.h])
@@ -12,7 +12,7 @@ AC_CONFIG_MACRO_DIR([m4])
 # Checks for programs.
 AC_PROG_CXX
 AX_CXXFLAGS_WARN_ALL
-AX_CXX_COMPILE_STDCXX([11])
+AX_CXX_COMPILE_STDCXX([14])
 
 # Checks for libraries.
 
