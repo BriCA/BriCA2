@@ -22,6 +22,10 @@ class single_phase_scheduler {
 
   void add(component_type& component) { components.push_back(&component); }
 
+  template <class InputIt> void add(InputIt first, InputIt last) {
+    std::for_each(first, last, [&](auto& c) { add(c); });
+  }
+
   void step() {
     std::vector<std::function<void(void)>> fs(components.size());
     for (std::size_t i = 0; i < components.size(); ++i) {
@@ -58,6 +62,11 @@ class multi_phase_scheduler {
     phases[phase].add(component);
   }
 
+  template <class InputIt>
+  void add(InputIt first, InputIt last, std::size_t phase = 0) {
+    std::for_each(first, last, [&](auto& c) { add(c, phase); });
+  }
+
   void step() {
     for (auto phase : phases) phase.step();
   }
@@ -73,6 +82,10 @@ class virtual_time_scheduler {
 
   void add(component_type& component, timing_t timing) {
     event_queue.push({&component, timing.offset, timing, false});
+  }
+
+  template <class InputIt> void add(InputIt first, InputIt last, timing_t t) {
+    std::for_each(first, last, [&](auto& c) { add(c, t); });
   }
 
   void step() {
