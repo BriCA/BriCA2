@@ -34,4 +34,8 @@ AC_CHECK_TYPES([ptrdiff_t])
 AC_FUNC_MALLOC
 AC_CHECK_FUNCS([dup2 memset])
 
+# Checks for pthread
+AC_CHECK_HEADERS(pthread.h,, [AC_MSG_ERROR([pthread.h required])])
+AC_CHECK_LIB(pthread, pthread_create, [LIBS="$LIBS -lpthread"])
+
 AC_OUTPUT

@@ -90,7 +90,6 @@ TEST_CASE(
   CHECK(equal(c3.get_in_port(key).get(), value));
 
   for(std::size_t i = 0; i < 100; ++i) {
-    std::cout << i << std::endl;
     s.step();
   }
 }
