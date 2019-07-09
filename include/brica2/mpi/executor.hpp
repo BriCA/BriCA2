@@ -22,9 +22,6 @@ template <class Executor> class mpi_executor : public Executor {
   MPI_Comm comm;
 };
 
-using serial = mpi_executor<brica2::serial>;
-using thread_parallel = mpi_executor<brica2::thread_parallel>;
-
 NAMESPACE_END(mpi)
 NAMESPACE_END(BRICA2_NAMESPACE)
 

@@ -34,7 +34,7 @@ TEST_CASE(
   brica2::connect({c1, key}, {c2, key});
   brica2::connect({c2, key}, {c3, key});
 
-  brica2::thread_parallel exec;
+  brica2::parallel exec;
   brica2::virtual_time_scheduler s(exec);
 
   brica2::timing_t t{0, 1, 0};

@@ -1,5 +1,5 @@
 #include "catch.hpp"
-#include "brica2/executor.hpp"
+#include "brica2/executors.hpp"
 
 #include <chrono>
 #include <thread>
@@ -17,8 +17,8 @@ TEST_CASE("serial executor", "[serial]") {
   REQUIRE(diff.count() == 3);
 }
 
-TEST_CASE("thread pool executor", "[thread_parallel][!mayfail]") {
-  brica2::thread_parallel exec;
+TEST_CASE("thread parallel executor", "[parallel][!mayfail]") {
+  brica2::parallel exec;
 
   auto sleep = [] { std::this_thread::sleep_for(chrono::milliseconds(1)); };
   auto start = chrono::steady_clock::now();

@@ -2,7 +2,7 @@
 #define __BRICA2_SCHEDULER_HPP__
 
 #include "brica2/component.hpp"
-#include "brica2/executor.hpp"
+#include "brica2/executors.hpp"
 
 #include <queue>
 
