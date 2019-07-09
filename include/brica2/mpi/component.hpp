@@ -64,7 +64,7 @@ template <class T> class proxy : public component_type, public singular_io {
   virtual port& get_out_port() override { return out_port; }
 
   void send() {
-    const void* buf = memory.data();
+    void* buf = memory.data();
     int count = memory.size();
     MPI_Isend(buf, count, datatype<T>(), dest, tag, comm, &request);
   }
