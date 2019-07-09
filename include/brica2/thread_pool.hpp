@@ -23,8 +23,11 @@ class thread_pool {
   }
 
   void post(std::function<void()> f) {
-    std::unique_lock<std::mutex> lock(mutex);
-    tasks.push(f);
+    {
+      std::unique_lock<std::mutex> lock(mutex);
+      tasks.push(f);
+    }
+
     condition.notify_one();
   }
 
@@ -44,10 +47,13 @@ class thread_pool {
  private:
   void spawn() {
     std::function<void()> task;
+
     while (!stop) {
       std::unique_lock<std::mutex> lock(mutex);
-      condition.wait(
-          lock, [this] { return (!tasks.empty()) || (tasks.empty() && stop); });
+      condition.wait(lock, [this]() {
+        return (!tasks.empty()) || (tasks.empty() && stop);
+      });
+
       if (!tasks.empty()) {
         task = std::move(tasks.front());
         tasks.pop();
