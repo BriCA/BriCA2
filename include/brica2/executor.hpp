@@ -1,8 +1,6 @@
 #ifndef __BRICA2_EXECUTOR_HPP__
 #define __BRICA2_EXECUTOR_HPP__
 
-#define ASIO_STANDALONE
-
 #include "brica2/macros.h"
 
 #include <functional>

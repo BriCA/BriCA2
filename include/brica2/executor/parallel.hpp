@@ -3,14 +3,13 @@
 
 #include "brica2/macros.h"
 #include "brica2/executor.hpp"
+#include "brica2/thread_pool.hpp"
 
 #include <functional>
 #include <vector>
 #include <atomic>
 #include <mutex>
 #include <condition_variable>
-
-#include <asio.hpp>
 
 NAMESPACE_BEGIN(BRICA2_NAMESPACE)
 
@@ -29,7 +28,7 @@ class parallel : public executor_type {
   virtual void post_impl(std::vector<std::function<void(void)>>& fs) override {
     total += fs.size();
     std::for_each(fs.begin(), fs.end(), [&](auto& f) {
-      asio::post(pool, [&]() {
+      dispatch(pool, [&]() {
         std::unique_lock<std::mutex> lock{mutex};
         f();
         ++count;
@@ -46,7 +45,7 @@ class parallel : public executor_type {
   }
 
  private:
-  asio::thread_pool pool;
+  thread_pool pool;
   std::atomic<std::size_t> count;
   std::atomic<std::size_t> total;
   std::mutex mutex;

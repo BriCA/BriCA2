@@ -1,5 +1,4 @@
 #include "brica2/brica2.hpp"
-#include "brica2/executors.hpp"
 #include "catch.hpp"
 
 inline bool equal(const brica2::buffer& lhs, const brica2::buffer& rhs) {
@@ -90,7 +89,7 @@ TEST_CASE(
   CHECK(equal(c2.get_out_port(key).get(), value));
   CHECK(equal(c3.get_in_port(key).get(), value));
 
-  for(std::size_t i = 0; i < 100; ++i) {
+  for(std::size_t i = 0; i < 10000; ++i) {
     s.step();
   }
 }
