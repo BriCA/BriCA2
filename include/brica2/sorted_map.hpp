@@ -9,9 +9,9 @@
 NAMESPACE_BEGIN(BRICA2_NAMESPACE)
 NAMESPACE_BEGIN(detail)
 
-template <class C, bool> struct brace_impl;
+template <class C, bool> struct sorted_map_brace_impl;
 
-template <class C> struct brace_impl<C, true> {
+template <class C> struct sorted_map_brace_impl<C, true> {
   using key_type = typename C::key_type;
   using mapped_type = typename C::mapped_type;
 
@@ -24,13 +24,11 @@ template <class C> struct brace_impl<C, true> {
   }
 };
 
-template <class C> struct brace_impl<C, false> {
+template <class C> struct sorted_map_brace_impl<C, false> {
   using key_type = typename C::key_type;
   using mapped_type = typename C::mapped_type;
 
-  static mapped_type& op(C& map, const key_type& key) {
-    return map.at(key);
-  }
+  static mapped_type& op(C& map, const key_type& key) { return map.at(key); }
 
   static mapped_type& op(C& map, key_type&& key) { return map.at(key); }
 };
@@ -156,15 +154,16 @@ class sorted_map {
   const mapped_type& index(size_type pos) const { return data.at(pos).second; }
 
   mapped_type& operator[](const key_type& key) {
-    return detail::
-        brace_impl<sorted_map, std::is_default_constructible<T>::value>::op(
-            *this, key);
+    return detail::sorted_map_brace_impl<
+        sorted_map,
+        std::is_default_constructible<T>::value>::op(*this, key);
   }
 
   mapped_type& operator[](key_type&& key) {
-    return detail::
-        brace_impl<sorted_map, std::is_default_constructible<T>::value>::op(
-            *this, std::forward<key_type>(key));
+    return detail::sorted_map_brace_impl<
+        sorted_map,
+        std::is_default_constructible<T>::value>::
+        op(*this, std::forward<key_type>(key));
   }
 
   const mapped_type& operator[](const key_type& key) const { return at(key); }
