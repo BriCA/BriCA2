@@ -1,4 +1,5 @@
 #include "brica2/brica2.hpp"
+#include "brica2/executors.hpp"
 #include "catch.hpp"
 
 inline bool equal(const brica2::buffer& lhs, const brica2::buffer& rhs) {
