@@ -29,6 +29,7 @@ class parallel : public executor_type {
     dispatch(pool, [=] {
       f();
       ++count;
+      std::lock_guard<std::mutex> lock{mutex};
       condition.notify_all();
     });
   }
