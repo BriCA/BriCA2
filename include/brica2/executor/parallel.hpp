@@ -12,17 +12,19 @@
 
 namespace brica2 {
 
-inline auto default_concurrency(std::size_t n) -> decltype(auto) {
+using thread_count_t = decltype(std::thread::hardware_concurrency());
+
+inline auto default_concurrency(thread_count_t n) -> decltype(auto) {
   if (n == 0) {
     auto value = std::thread::hardware_concurrency();
-    return value == 0 ? 1 : value;
+    return value == 0 ? thread_count_t(1) : value;
   }
   return n;
 }
 
 class parallel : public executor_type {
  public:
-  parallel(std::size_t n = 0)
+  parallel(thread_count_t n = 0)
       : pool(default_concurrency(n)), count(0), total(0) {}
 
   virtual ~parallel() { pool.join(); }
