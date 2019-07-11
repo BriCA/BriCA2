@@ -2,7 +2,6 @@ nobase_include_HEADERS = brica2/buffer.hpp \
                          brica2/component.hpp \
                          brica2/executor.hpp \
                          brica2/format.hpp \
-                         brica2/macros.h \
                          brica2/port.hpp \
                          brica2/scheduler.hpp \
                          brica2/sorted_map.hpp \

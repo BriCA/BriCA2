@@ -3,16 +3,15 @@
 
 #include "mpi.h"
 
-NAMESPACE_BEGIN(BRICA2_NAMESPACE)
-NAMESPACE_BEGIN(mpi)
+namespace brica2 {
+namespace mpi {
 
 struct scoped_instance {
   scoped_instance(int& argc, char* argv[]) { MPI_Init(&argc, &argv); }
   virtual ~scoped_instance() { MPI_Finalize(); }
 };
 
-NAMESPACE_END(mpi)
-NAMESPACE_END(BRICA2_NAMESPACE)
+}  // namespace mpi
+}  // namespace brica2
 
 #endif  // __BRICA2_MPI_INSTANCE_HPP__
-

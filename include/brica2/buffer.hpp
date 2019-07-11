@@ -2,7 +2,6 @@
 #define __BRICA2_BUFFER_HPP__
 
 #include "brica2/typedef.h"
-#include "brica2/macros.h"
 #include "brica2/format.hpp"
 #include "brica2/span.hpp"
 
@@ -15,8 +14,8 @@
 #include <cstdlib>
 #include <cstring>
 
-NAMESPACE_BEGIN(BRICA2_NAMESPACE)
-NAMESPACE_BEGIN(detail)
+namespace brica2 {
+namespace detail {
 
 enum class byte : unsigned char {};
 
@@ -38,7 +37,7 @@ auto product(InputIt first, InputIt last) -> decltype(auto) {
   return std::accumulate(first, last, 1, multiplies());
 }
 
-NAMESPACE_END(detail)
+}  // namespace detail
 
 class incompatible_exception : public std::exception {
  public:
@@ -179,6 +178,6 @@ inline buffer zeros_like(const buffer& other) {
   return ret;
 }
 
-NAMESPACE_END(BRICA2_NAMESPACE)
+}  // namespace brica2
 
 #endif  // __BRICA2_BUFFER_HPP__

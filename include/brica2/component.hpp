@@ -1,7 +1,6 @@
 #ifndef __BRICA2_COMPONENT_HPP__
 #define __BRICA2_COMPONENT_HPP__
 
-#include "brica2/macros.h"
 #include "brica2/buffer.hpp"
 #include "brica2/format.hpp"
 #include "brica2/port.hpp"
@@ -9,7 +8,7 @@
 
 #include <functional>
 
-NAMESPACE_BEGIN(BRICA2_NAMESPACE)
+namespace brica2 {
 
 struct component_type {
   virtual void collect() = 0;
@@ -101,6 +100,6 @@ inline void connect(port_spec&& source, port_spec&& target) {
   target_port = source_port;
 }
 
-NAMESPACE_END(BRICA2_NAMESPACE)
+}  // namespace brica2
 
 #endif  // __BRICA2_COMPONENT_HPP__

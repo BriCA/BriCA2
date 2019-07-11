@@ -8,14 +8,16 @@
 
 #include "mpi.h"
 
-NAMESPACE_BEGIN(BRICA2_NAMESPACE)
-NAMESPACE_BEGIN(mpi)
+namespace brica2 {
+namespace mpi {
 
 class component : public basic_component {
  public:
   explicit component(
       const functor_type& f, int rank, MPI_Comm comm = MPI_COMM_WORLD)
-      : basic_component(f), wanted_rank(rank) {}
+      : basic_component(f), wanted_rank(rank) {
+    MPI_Comm_rank(comm, &actual_rank);
+  }
 
   explicit component(functor_type&& f, int rank, MPI_Comm comm = MPI_COMM_WORLD)
       : basic_component(std::forward<functor_type>(f)), wanted_rank(rank) {
@@ -174,7 +176,7 @@ inline void connect(singular_io& source, port_spec&& target) {
   target_port = source_port;
 }
 
-NAMESPACE_END(mpi)
-NAMESPACE_END(BRICA2_NAMESPACE)
+}  // namespace mpi
+}  // namespace brica2
 
 #endif  // __BRICA2_MPI_COMPONENT_HPP__

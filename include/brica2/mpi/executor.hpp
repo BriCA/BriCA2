@@ -3,8 +3,8 @@
 
 #include "mpi.h"
 
-NAMESPACE_BEGIN(BRICA2_NAMESPACE)
-NAMESPACE_BEGIN(mpi)
+namespace brica2 {
+namespace mpi {
 
 template <class Executor> class executor : public Executor {
  public:
@@ -20,7 +20,7 @@ template <class Executor> class executor : public Executor {
   MPI_Comm comm;
 };
 
-NAMESPACE_END(mpi)
-NAMESPACE_END(BRICA2_NAMESPACE)
+}  // namespace mpi
+}  // namespace brica2
 
 #endif  // __BRICA2_MPI_EXECUTOR_HPP__

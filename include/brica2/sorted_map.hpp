@@ -1,13 +1,11 @@
 #ifndef __BRICA2_SORTED_MAP_HPP__
 #define __BRICA2_SORTED_MAP_HPP__
 
-#include "brica2/macros.h"
-
 #include <utility>
 #include <vector>
 
-NAMESPACE_BEGIN(BRICA2_NAMESPACE)
-NAMESPACE_BEGIN(detail)
+namespace brica2 {
+namespace detail {
 
 template <class C, bool> struct sorted_map_brace_impl;
 
@@ -33,7 +31,7 @@ template <class C> struct sorted_map_brace_impl<C, false> {
   static mapped_type& op(C& map, key_type&& key) { return map.at(key); }
 };
 
-NAMESPACE_END(detail)
+}  // namespace detail
 
 template <
     class Key,
@@ -399,6 +397,6 @@ class sorted_map {
   key_compare compare;
 };
 
-NAMESPACE_END(BRICA2_NAMESPACE)
+}  // namespace brica2
 
 #endif  // __BRICA2_SORTED_MAP_HPP__

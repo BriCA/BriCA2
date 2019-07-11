@@ -1,12 +1,10 @@
 #ifndef __BRICA2_ASSERT_HPP__
 #define __BRICA2_ASSERT_HPP__
 
-#include "brica2/macros.h"
-
 #include <exception>
 #include <stdexcept>
 
-NAMESPACE_BEGIN(BRICA2_NAMESPACE)
+namespace brica2 {
 
 struct fail_fast : public std::logic_error {
   explicit fail_fast(char const* const message) : std::logic_error(message) {}
@@ -23,24 +21,22 @@ struct fail_fast : public std::logic_error {
 #define BRICA2_UNLIKELY(x) (!!(x))
 #endif
 
-NAMESPACE_BEGIN(detail)
+namespace detail {
 
-[[noreturn]] inline void terminate() noexcept {
-  std::terminate();
-}
+[[noreturn]] inline void terminate() noexcept { std::terminate(); }
 
 template <class Exception>
 [[noreturn]] void throw_exception(Exception&& exception) {
   throw std::forward<Exception>(exception);
 }
 
-NAMESPACE_END(detail)
-NAMESPACE_END(BRICA2_NAMESPACE)
+}  // namespace detail
+}  // namespace brica2
 
-#define BRICA2_CONTRACT_CHECK(type, cond)                                     \
-  (BRICA2_LIKELY(cond) ? static_cast<void>(0)                                 \
+#define BRICA2_CONTRACT_CHECK(type, cond)                                   \
+  (BRICA2_LIKELY(cond) ? static_cast<void>(0)                               \
                        : brica2::detail::throw_exception(brica2::fail_fast( \
-                             "BRICA2: " type "failure at " __FILE__           \
+                             "BRICA2: " type "failure at " __FILE__         \
                              ": " BRICA2_STRINGIFY(__LINE__))))
 
 #define Expects(cond) BRICA2_CONTRACT_CHECK("Precondition", cond)

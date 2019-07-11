@@ -1,10 +1,9 @@
 #ifndef __BRICA2_PORT_HPP__
 #define __BRICA2_PORT_HPP__
 
-#include "brica2/macros.h"
 #include "brica2/buffer.hpp"
 
-NAMESPACE_BEGIN(BRICA2_NAMESPACE)
+namespace brica2 {
 
 class port {
  public:
@@ -38,8 +37,10 @@ class port {
 inline bool operator==(const port& lhs, const port& rhs) {
   return lhs.self == rhs.self;
 }
-inline bool operator!=(const port& lhs, const port& rhs) { return !(lhs == rhs); }
+inline bool operator!=(const port& lhs, const port& rhs) {
+  return !(lhs == rhs);
+}
 
-NAMESPACE_END(BRICA2_NAMESPACE)
+}  // namespace brica2
 
 #endif  // __BRICA2_PORT_HPP__

@@ -1,7 +1,6 @@
 #ifndef __BRICA2_EXECUTOR_PARALLEL_HPP__
 #define __BRICA2_EXECUTOR_PARALLEL_HPP__
 
-#include "brica2/macros.h"
 #include "brica2/executor.hpp"
 #include "brica2/thread_pool.hpp"
 
@@ -11,7 +10,7 @@
 #include <mutex>
 #include <condition_variable>
 
-NAMESPACE_BEGIN(BRICA2_NAMESPACE)
+namespace brica2 {
 
 inline auto default_concurrency() -> decltype(auto) {
   auto value = std::thread::hardware_concurrency();
@@ -25,15 +24,12 @@ class parallel : public executor_type {
 
   virtual ~parallel() { pool.join(); }
 
-  virtual void post_impl(std::vector<std::function<void(void)>>& fs) override {
-    total += fs.size();
-    std::for_each(fs.begin(), fs.end(), [&](auto& f) {
-      dispatch(pool, [&]() {
-        std::unique_lock<std::mutex> lock{mutex};
-        f();
-        ++count;
-        condition.notify_all();
-      });
+  virtual void post(std::function<void()> f) override {
+    ++total;
+    dispatch(pool, [=] {
+      f();
+      ++count;
+      condition.notify_all();
     });
   }
 
@@ -52,6 +48,6 @@ class parallel : public executor_type {
   std::condition_variable condition;
 };
 
-NAMESPACE_END(BRICA2_NAMESPACE)
+}  // namespace brica2
 
 #endif  // __BRICA2_EXECUTOR_PARALLEL_HPP__

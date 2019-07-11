@@ -1,14 +1,13 @@
 #ifndef __BRICA2_SPAN_HPP__
 #define __BRICA2_SPAN_HPP__
 
-#include "brica2/macros.h"
 #include "brica2/assert.hpp"
 
 #include <array>
 #include <iterator>
 #include <type_traits>
 
-NAMESPACE_BEGIN(BRICA2_NAMESPACE)
+namespace brica2 {
 
 enum class byte : unsigned char {};
 
@@ -18,7 +17,7 @@ struct narrowing_error : public std::exception {};
 
 template <class ElementType, std::ptrdiff_t Extent = dynamic_extent> class span;
 
-NAMESPACE_BEGIN(detail)
+namespace detail {
 
 template <class T> struct is_span_oracle : std::false_type {};
 template <class ElementType, std::ptrdiff_t Extent>
@@ -229,7 +228,7 @@ struct is_same_signedness
           bool,
           std::is_signed<T>::value == std::is_signed<U>::value> {};
 
-NAMESPACE_END(detail)
+}  // namespace detail
 
 template <class T, class U> constexpr T narrow_cast(U&& u) noexcept {
   return static_cast<T>(std::forward<U>(u));
@@ -252,8 +251,7 @@ template <class ElementType, std::ptrdiff_t Extent> class span {
   using reference = element_type&;
 
   using iterator = detail::span_iterator<span<ElementType, Extent>, false>;
-  using const_iterator =
-      detail::span_iterator<span<ElementType, Extent>, true>;
+  using const_iterator = detail::span_iterator<span<ElementType, Extent>, true>;
   using reverse_iterator = std::reverse_iterator<iterator>;
   using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
@@ -324,8 +322,8 @@ template <class ElementType, std::ptrdiff_t Extent> class span {
               OtherElementType,
               element_type>::value>>
   constexpr span(const span<OtherElementType, OtherExtent>& other)
-      : storage_(
-            other.data(), detail::extent_type<OtherExtent>(other.size())) {}
+      : storage_(other.data(), detail::extent_type<OtherExtent>(other.size())) {
+  }
 
   ~span() noexcept = default;
 
@@ -344,8 +342,8 @@ template <class ElementType, std::ptrdiff_t Extent> class span {
   }
 
   template <std::ptrdiff_t Offset, std::ptrdiff_t Count = dynamic_extent>
-  constexpr auto subspan() const -> detail::
-      calculate_subspan_type_t<ElementType, Extent, Offset, Count> {
+  constexpr auto subspan() const
+      -> detail::calculate_subspan_type_t<ElementType, Extent, Offset, Count> {
     Expects(
         (0 <= Offset && 0 <= size() - Offset) &&
         (Count == dynamic_extent || (0 <= Count && Offset + Count <= size())));
@@ -463,6 +461,6 @@ template <class ElementType, std::ptrdiff_t Extent> class span {
   }
 };
 
-NAMESPACE_END(BRICA2_NAMESPACE)
+}  // namespace brica2
 
 #endif  // __BRICA2_SPAN_HPP__

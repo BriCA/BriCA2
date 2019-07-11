@@ -3,8 +3,8 @@
 
 #include "mpi.h"
 
-NAMESPACE_BEGIN(BRICA2_NAMESPACE)
-NAMESPACE_BEGIN(mpi)
+namespace brica2 {
+namespace mpi {
 
 template <class T> MPI_Datatype datatype();
 template <> MPI_Datatype datatype<char>() { return MPI_CHAR; }
@@ -25,7 +25,7 @@ template <> MPI_Datatype datatype<unsigned long long>() {
   return MPI_UNSIGNED_LONG_LONG;
 }
 
-NAMESPACE_END(mpi)
-NAMESPACE_END(BRICA2_NAMESPACE)
+}  // namespace mpi
+}  // namespace brica2
 
 #endif  // __BRICA2_MPI_DATATYPE_HPP__

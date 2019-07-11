@@ -1,13 +1,12 @@
 #ifndef __BRICA2_FORMAT_HPP__
 #define __BRICA2_FORMAT_HPP__
 
-#include "brica2/macros.h"
 #include "brica2/type_traits.hpp"
 
 #include <string>
 
-NAMESPACE_BEGIN(BRICA2_NAMESPACE)
-NAMESPACE_BEGIN(detail)
+namespace brica2 {
+namespace detail {
 
 template <class T, class... Ts> struct format_t {
   char value[2];
@@ -16,7 +15,7 @@ template <class T, class... Ts> struct format_t {
       : value{cs[find_type<T, Ts...>()], '\0'} {}
 };
 
-NAMESPACE_END(detail)
+}  // namespace detail
 
 template <class T> struct FormatDescriptor {
   static auto format() -> decltype(auto) {
@@ -31,6 +30,6 @@ template <class T> struct FormatDescriptor {
   }
 };
 
-NAMESPACE_END(BRICA2_NAMESPACE)
+}  // namespace brica2
 
 #endif  // __BRICA2_FORMAT_HPP__

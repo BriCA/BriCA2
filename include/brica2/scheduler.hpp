@@ -5,8 +5,9 @@
 #include "brica2/executor.hpp"
 
 #include <queue>
+#include <algorithm>
 
-NAMESPACE_BEGIN(BRICA2_NAMESPACE)
+namespace brica2 {
 
 using duration_t = long long int;
 
@@ -36,7 +37,7 @@ class single_phase_scheduler {
       };
     }
 
-    executor.post(fs);
+    for (auto f : fs) executor.post(f);
     executor.sync();
 
     for (std::size_t i = 0; i < components.size(); ++i) {
@@ -44,7 +45,7 @@ class single_phase_scheduler {
       fs[i] = [component]() { component->expose(); };
     }
 
-    executor.post(fs);
+    for (auto f : fs) executor.post(f);
     executor.sync();
   }
 
@@ -115,10 +116,10 @@ class virtual_time_scheduler {
       event_queue.push(event);
     }
 
-    executor.post(asleep);
+    for (auto f : asleep) executor.post(f);
     executor.sync();
 
-    executor.post(awake);
+    for (auto f : awake) executor.post(f);
     executor.sync();
   }
 
@@ -136,6 +137,6 @@ class virtual_time_scheduler {
   executor_type& executor;
 };
 
-NAMESPACE_END(BRICA2_NAMESPACE)
+}  // namespace brica2
 
 #endif  // __BRICA2_SCHEDULER_HPP__

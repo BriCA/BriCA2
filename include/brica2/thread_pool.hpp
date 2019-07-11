@@ -8,7 +8,7 @@
 #include <queue>
 #include <vector>
 
-NAMESPACE_BEGIN(BRICA2_NAMESPACE)
+namespace brica2 {
 
 class thread_pool {
  public:
@@ -22,9 +22,9 @@ class thread_pool {
     if (!stop) join();
   }
 
-  void post(std::function<void()> f) {
+  void post(std::function<void()>& f) {
     {
-      std::unique_lock<std::mutex> lock(mutex);
+      std::lock_guard<std::mutex> lock{mutex};
       tasks.push(f);
     }
 
@@ -33,7 +33,7 @@ class thread_pool {
 
   void join() {
     {
-      std::unique_lock<std::mutex> lock(mutex);
+      std::lock_guard<std::mutex> lock{mutex};
       stop = true;
     }
 
@@ -46,19 +46,16 @@ class thread_pool {
 
  private:
   void spawn() {
-    std::function<void()> task;
-
-    while (!stop) {
-      std::unique_lock<std::mutex> lock(mutex);
-      condition.wait(lock, [this]() {
-        return (!tasks.empty()) || (tasks.empty() && stop);
-      });
-
-      if (!tasks.empty()) {
+    for (;;) {
+      std::function<void()> task;
+      {
+        std::unique_lock<std::mutex> lock{mutex};
+        condition.wait(lock, [this] { return !tasks.empty() || stop; });
+        if (stop && tasks.empty()) return;
         task = std::move(tasks.front());
         tasks.pop();
-        task();
       }
+      task();
     }
   }
 
@@ -74,6 +71,6 @@ inline void dispatch(thread_pool& pool, std::function<void()> f) {
   pool.post(f);
 }
 
-NAMESPACE_END(BRICA2_NAMESPACE)
+}  // namespace brica2
 
 #endif  // __BRICA2_THREAD_POOL_HPP__
