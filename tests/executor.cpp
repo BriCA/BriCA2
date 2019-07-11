@@ -8,7 +8,7 @@
 
 #include <iostream>
 
-#define WORKLOAD 1000
+#define WORKLOAD 10
 
 namespace chrono = std::chrono;
 
@@ -25,7 +25,7 @@ template <class T> class Workload {
       : engine(device()), x(std::make_shared<T>(T())) {}
 
   void operator()() {
-    std::normal_distribution<T> dist;
+    std::uniform_real_distribution<T> dist(1.0, 2.0);
     auto start = chrono::steady_clock::now();
     while (elapsed<duration_type>(start).count() < WORKLOAD) {
       (*x) += dist(engine);
