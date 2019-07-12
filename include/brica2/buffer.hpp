@@ -159,12 +159,13 @@ inline buffer empty_like(const buffer& other) {
   auto ret(other);
   auto size = ret.size_bytes();
   auto& info = ret.request();
-  auto ptr = new buffer_info{info.itemsize,
-                             info.format,
-                             info.ndim,
-                             info.shape,
-                             info.strides,
-                             std::malloc(size)};
+  auto ptr = new buffer_info;
+  ptr->itemsize = info.itemsize;
+  ptr->format = info.format;
+  ptr->ndim = info.ndim;
+  ptr->shape = info.shape;
+  ptr->strides = info.strides;
+  ptr->ptr = std::malloc(sze);
   ret.reset(ptr);
   return ret;
 }
