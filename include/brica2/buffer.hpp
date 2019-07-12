@@ -165,7 +165,7 @@ inline buffer empty_like(const buffer& other) {
   ptr->ndim = info.ndim;
   ptr->shape = info.shape;
   ptr->strides = info.strides;
-  ptr->ptr = std::malloc(sze);
+  ptr->ptr = std::malloc(size);
   ret.reset(ptr);
   return ret;
 }
