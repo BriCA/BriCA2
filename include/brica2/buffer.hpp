@@ -53,8 +53,6 @@ struct buffer_info {
   std::vector<ssize_t> shape;
   std::vector<ssize_t> strides;
   void* ptr;
-
-  buffer_info() = delete;
 };
 
 inline bool compatible(const buffer_info& lhs, const buffer_info& rhs) {
@@ -79,13 +77,14 @@ class buffer {
 
   template <class T, class InputIt>
   buffer(InputIt first, InputIt last, const T& type_hint = T())
-      : info(std::shared_ptr<buffer_info>(new buffer_info{
-            sizeof(T),
-            FormatDescriptor<T>::format(),
-            std::distance(first, last),
-            {first, last},
-            detail::default_strides<T>(first, last),
-            std::malloc(sizeof(T) * detail::product(first, last))})) {}
+      : info(std::make_shared<buffer_info>()) {
+    info->itemsize = sizeof(T);
+    info->format = FormatDescriptor<T>::format();
+    info->ndim = std::distance(first, last);
+    info->shape = {first, last};
+    info->strides = detail::default_strides<T>(first, last);
+    info->ptr = std::malloc(sizeof(T) * detail::product(first, last));
+  }
 
  private:
   void reset(buffer_info* ptr) { info.reset(ptr); }

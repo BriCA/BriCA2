@@ -65,7 +65,7 @@ class multi_phase_scheduler {
 
   template <class InputIt>
   void add(InputIt first, InputIt last, std::size_t phase = 0) {
-    std::for_each(first, last, [&](auto& c) { add(c, phase); });
+    std::for_each(first, last, [this, phase](auto& c) { this->add(c, phase); });
   }
 
   void step() {
