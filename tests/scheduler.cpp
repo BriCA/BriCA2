@@ -43,39 +43,39 @@ TEST_CASE(
   s.add(c2, t);
   s.add(c3, t);
 
-  CHECK(equal(c1.get_output(key), zeros));
-  CHECK(equal(c2.get_input(key), zeros));
-  CHECK(equal(c2.get_output(key), zeros));
-  CHECK(equal(c3.get_input(key), zeros));
+  CHECK(!equal(c1.get_output(key), value));
+  CHECK(!equal(c2.get_input(key), value));
+  CHECK(!equal(c2.get_output(key), value));
+  CHECK(!equal(c3.get_input(key), value));
 
-  CHECK(equal(c1.get_out_port(key).get(), zeros));
-  CHECK(equal(c2.get_in_port(key).get(), zeros));
-  CHECK(equal(c2.get_out_port(key).get(), zeros));
-  CHECK(equal(c3.get_in_port(key).get(), zeros));
+  CHECK(!equal(c1.get_out_port(key).get(), value));
+  CHECK(!equal(c2.get_in_port(key).get(), value));
+  CHECK(!equal(c2.get_out_port(key).get(), value));
+  CHECK(!equal(c3.get_in_port(key).get(), value));
 
   s.step();
 
   CHECK(equal(c1.get_output(key), value));
-  CHECK(equal(c2.get_input(key), zeros));
-  CHECK(equal(c2.get_output(key), zeros));
-  CHECK(equal(c3.get_input(key), zeros));
+  CHECK(!equal(c2.get_input(key), value));
+  CHECK(!equal(c2.get_output(key), value));
+  CHECK(!equal(c3.get_input(key), value));
 
-  CHECK(equal(c1.get_out_port(key).get(), zeros));
-  CHECK(equal(c2.get_in_port(key).get(), zeros));
-  CHECK(equal(c2.get_out_port(key).get(), zeros));
-  CHECK(equal(c3.get_in_port(key).get(), zeros));
+  CHECK(!equal(c1.get_out_port(key).get(), value));
+  CHECK(!equal(c2.get_in_port(key).get(), value));
+  CHECK(!equal(c2.get_out_port(key).get(), value));
+  CHECK(!equal(c3.get_in_port(key).get(), value));
 
   s.step();
 
   CHECK(equal(c1.get_output(key), value));
   CHECK(equal(c2.get_input(key), value));
   CHECK(equal(c2.get_output(key), value));
-  CHECK(equal(c3.get_input(key), zeros));
+  CHECK(!equal(c3.get_input(key), value));
 
   CHECK(equal(c1.get_out_port(key).get(), value));
   CHECK(equal(c2.get_in_port(key).get(), value));
-  CHECK(equal(c2.get_out_port(key).get(), zeros));
-  CHECK(equal(c3.get_in_port(key).get(), zeros));
+  CHECK(!equal(c2.get_out_port(key).get(), value));
+  CHECK(!equal(c3.get_in_port(key).get(), value));
 
   s.step();
 

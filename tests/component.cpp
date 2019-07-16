@@ -15,7 +15,6 @@ inline bool equal(const brica2::buffer& lhs, const brica2::buffer& rhs) {
 TEST_CASE("constant/identity/discard component chain", "[component]") {
   std::string key = "default";
   std::vector<brica2::ssize_t> shape({3});
-  auto zeros = brica2::fill<float>(shape, 0);
   auto value = brica2::with<float>({1, 2, 3}, shape);
 
   brica2::functor_type constant =
@@ -55,29 +54,29 @@ TEST_CASE("constant/identity/discard component chain", "[component]") {
     c3.expose();
   };
 
-  CHECK(equal(c1.get_output(key), zeros));
-  CHECK(equal(c2.get_input(key), zeros));
-  CHECK(equal(c2.get_output(key), zeros));
-  CHECK(equal(c3.get_input(key), zeros));
+  CHECK(!equal(c1.get_output(key), value));
+  CHECK(!equal(c2.get_input(key), value));
+  CHECK(!equal(c2.get_output(key), value));
+  CHECK(!equal(c3.get_input(key), value));
 
-  CHECK(equal(c1.get_out_port(key).get(), zeros));
-  CHECK(equal(c2.get_in_port(key).get(), zeros));
-  CHECK(equal(c2.get_out_port(key).get(), zeros));
-  CHECK(equal(c3.get_in_port(key).get(), zeros));
+  CHECK(!equal(c1.get_out_port(key).get(), value));
+  CHECK(!equal(c2.get_in_port(key).get(), value));
+  CHECK(!equal(c2.get_out_port(key).get(), value));
+  CHECK(!equal(c3.get_in_port(key).get(), value));
 
   collect();
   execute();
   expose();
 
   CHECK(equal(c1.get_output(key), value));
-  CHECK(equal(c2.get_input(key), zeros));
-  CHECK(equal(c2.get_output(key), zeros));
-  CHECK(equal(c3.get_input(key), zeros));
+  CHECK(!equal(c2.get_input(key), value));
+  CHECK(!equal(c2.get_output(key), value));
+  CHECK(!equal(c3.get_input(key), value));
 
   CHECK(equal(c1.get_out_port(key).get(), value));
   CHECK(equal(c2.get_in_port(key).get(), value));
-  CHECK(equal(c2.get_out_port(key).get(), zeros));
-  CHECK(equal(c3.get_in_port(key).get(), zeros));
+  CHECK(!equal(c2.get_out_port(key).get(), value));
+  CHECK(!equal(c3.get_in_port(key).get(), value));
 
   collect();
   execute();
@@ -86,7 +85,7 @@ TEST_CASE("constant/identity/discard component chain", "[component]") {
   CHECK(equal(c1.get_output(key), value));
   CHECK(equal(c2.get_input(key), value));
   CHECK(equal(c2.get_output(key), value));
-  CHECK(equal(c3.get_input(key), zeros));
+  CHECK(!equal(c3.get_input(key), value));
 
   CHECK(equal(c1.get_out_port(key).get(), value));
   CHECK(equal(c2.get_in_port(key).get(), value));
