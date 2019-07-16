@@ -8,7 +8,6 @@
 #include <vector>
 #include <atomic>
 #include <mutex>
-#include <condition_variable>
 
 namespace brica2 {
 
@@ -34,14 +33,13 @@ class parallel : public executor_type {
     dispatch(pool, [=] {
       f();
       ++count;
-      std::unique_lock<std::mutex> lock{mutex};
-      condition.notify_all();
     });
   }
 
   virtual void sync() override {
     std::unique_lock<std::mutex> lock{mutex};
-    if (count != total) condition.wait(lock, [&]() { return count == total; });
+    while (count != total)
+      ;
     count = 0;
     total = 0;
   }
@@ -51,7 +49,6 @@ class parallel : public executor_type {
   std::atomic<std::size_t> count;
   std::atomic<std::size_t> total;
   std::mutex mutex;
-  std::condition_variable condition;
 };
 
 }  // namespace brica2
