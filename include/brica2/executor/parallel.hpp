@@ -35,7 +35,6 @@ class parallel : public executor_type {
       f();
       ++count;
       std::unique_lock<std::mutex> lock{mutex};
-      lock.unlock();
       condition.notify_all();
     });
   }
