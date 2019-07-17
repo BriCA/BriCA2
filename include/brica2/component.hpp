@@ -31,6 +31,8 @@ class basic_component : public component_type {
   basic_component& operator=(const basic_component&) = default;
   basic_component& operator=(basic_component&&) = default;
 
+  virtual ~basic_component() {}
+
   template <class T, class S = std::initializer_list<ssize_t>>
   void make_in_port(const std::string& key, S&& s) {
     in_ports.try_emplace(key, std::forward<S>(s), T());

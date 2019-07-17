@@ -4,46 +4,95 @@
 #include "brica2/component.hpp"
 #include "brica2/mpi/datatype.hpp"
 
+#include <exception>
 #include <initializer_list>
+#include <memory>
 
 #include "mpi.h"
 
 namespace brica2 {
 namespace mpi {
 
-class component : public basic_component {
+class bad_rank : public std::exception {
+ public:
+  const char* what() const noexcept override {
+    return "called from invalid rank";
+  }
+};
+
+class component : public component_type {
  public:
   explicit component(
       const functor_type& f, int rank, MPI_Comm comm = MPI_COMM_WORLD)
-      : basic_component(f), wanted_rank(rank) {
+      : base(f), wanted_rank(rank) {
     MPI_Comm_rank(comm, &actual_rank);
   }
 
   explicit component(functor_type&& f, int rank, MPI_Comm comm = MPI_COMM_WORLD)
-      : basic_component(std::forward<functor_type>(f)), wanted_rank(rank) {
+      : base(std::forward<functor_type>(f)), wanted_rank(rank) {
     MPI_Comm_rank(comm, &actual_rank);
   }
 
+  component(const component&) = default;
+  component(component&&) = default;
+  component& operator=(const component&) = default;
+  component& operator=(component&&) = default;
+
   virtual ~component() {}
 
+  bool enabled() const { return wanted_rank == actual_rank; }
+
+  template <class T, class S = std::initializer_list<ssize_t>>
+  void make_in_port(const std::string& key, S&& s) {
+    if (enabled()) base.make_in_port<T>(key, std::forward<S>(s));
+  }
+
+  template <class T, class S = std::initializer_list<ssize_t>>
+  void make_out_port(const std::string& key, S&& s) {
+    if (enabled()) base.make_out_port<T>(key, std::forward<S>(s));
+  }
+
+  port& get_in_port(const std::string& key) {
+    if (enabled()) return base.get_in_port(key);
+    throw bad_rank();
+  }
+
+  port& get_out_port(const std::string& key) {
+    if (enabled()) return base.get_out_port(key);
+    throw bad_rank();
+  }
+
+  buffer& get_input(const std::string& key) {
+    if (enabled()) return get_input(key);
+    throw bad_rank();
+  }
+
+  buffer& get_output(const std::string& key) {
+    if (enabled()) return get_output(key);
+    throw bad_rank();
+  }
+
   virtual void collect() override {
-    if (wanted_rank == actual_rank) basic_component::collect();
+    if (enabled()) base.collect();
   }
 
   virtual void execute() override {
-    if (wanted_rank == actual_rank) basic_component::execute();
+    if (enabled()) base.execute();
   }
 
   virtual void expose() override {
-    if (wanted_rank == actual_rank) basic_component::expose();
+    if (enabled()) base.expose();
   }
 
  private:
+  basic_component base;
   int wanted_rank;
   int actual_rank;
 };
 
 struct singular_io {
+  virtual bool sending() const = 0;
+  virtual bool receiving() const = 0;
   virtual port& get_in_port() = 0;
   virtual port& get_out_port() = 0;
 };
@@ -52,43 +101,54 @@ template <class T> class proxy : public component_type, public singular_io {
  public:
   template <class S = std::initializer_list<ssize_t>>
   proxy(S&& s, int src, int dest, int tag = 0, MPI_Comm comm = MPI_COMM_WORLD)
-      : src(src),
-        dest(dest),
-        tag(tag),
-        comm(comm),
-        in_port(std::forward<S>(s), T()),
-        out_port(std::forward<S>(s), T()),
-        memory(fill(std::forward<S>(s), T())) {
+      : src(src), dest(dest), tag(tag), comm(comm) {
     MPI_Comm_rank(comm, &rank);
+    // clang-format off
+    if (rank == src) in_port = std::make_shared<port>(std::forward<S>(s), T());
+    if (rank == dest) out_port = std::make_shared<port>(std::forward<S>(s), T());
+    // clang-format on
+    if (rank == src || rank == dest) {
+      memory = std::make_shared<buffer>(std::forward<S>(s), T());
+    }
   }
 
-  virtual port& get_in_port() override { return in_port; }
-  virtual port& get_out_port() override { return out_port; }
+  virtual bool sending() const override { return rank == src; }
+  virtual bool receiving() const override { return rank == dest; }
+
+  virtual port& get_in_port() override {
+    if (sending()) return *in_port;
+    throw bad_rank();
+  }
+
+  virtual port& get_out_port() override {
+    if (receiving()) return *out_port;
+    throw bad_rank();
+  }
 
   void send() {
-    void* buf = memory.data();
-    int count = memory.size();
+    void* buf = memory->data();
+    int count = memory->size();
     MPI_Isend(buf, count, datatype<T>(), dest, tag, comm, &request);
   }
 
   void recv() {
-    void* buf = memory.data();
-    int count = memory.size();
+    void* buf = memory->data();
+    int count = memory->size();
     MPI_Irecv(buf, count, datatype<T>(), src, tag, comm, &request);
   }
 
   virtual void collect() override {
-    if (rank == src) memory = in_port.get();
+    if (sending()) *memory = in_port->get();
   }
 
   virtual void execute() override {
-    if (rank == src) send();
-    if (rank == dest) recv();
+    if (sending()) send();
+    if (receiving()) recv();
   }
 
   virtual void expose() override {
-    if (rank == src || rank == dest) MPI_Wait(&request, &status);
-    if (rank == dest) out_port.set(memory);
+    if (sending() || receiving()) MPI_Wait(&request, &status);
+    if (receiving()) out_port->set(*memory);
   }
 
  private:
@@ -96,9 +156,10 @@ template <class T> class proxy : public component_type, public singular_io {
   int dest;
   int tag;
   MPI_Comm comm;
-  port in_port;
-  port out_port;
-  buffer memory;
+
+  std::shared_ptr<port> in_port;
+  std::shared_ptr<port> out_port;
+  std::shared_ptr<buffer> memory;
 
   int rank;
   MPI_Status status;
@@ -109,19 +170,23 @@ template <class T, class S = std::initializer_list<ssize_t>>
 class broadcast : public component_type, public singular_io {
  public:
   broadcast(S&& s, int root, MPI_Comm comm = MPI_COMM_WORLD)
-      : root(root),
-        comm(comm),
-        in_port(std::forward<S>(s), T()),
-        out_port(std::forward<S>(s), T()),
-        memory(fill(std::forward<S>(s), T())) {
+      : root(root), comm(comm), memory(empty(std::forward<S>(s), T())) {
     MPI_Comm_rank(comm, &rank);
   }
 
-  virtual port& get_in_port() override { return in_port; }
-  virtual port& get_out_port() override { return out_port; }
+  virtual bool sending() const override { return rank == root; }
+  virtual bool receiving() const override { return rank != root; }
+
+  virtual port& get_in_port() override {
+    if (sending()) return *in_port;
+  }
+
+  virtual port& get_out_port() override {
+    if (receiving()) return *out_port;
+  }
 
   virtual void collect() override {
-    if (rank == root) memory = in_port.get();
+    if (sending()) *memory = in_port->get();
   }
 
   virtual void execute() override {
@@ -131,14 +196,15 @@ class broadcast : public component_type, public singular_io {
   }
 
   virtual void expose() override {
-    if (rank != root) out_port.set(memory);
+    if (receiving()) out_port->set(*memory);
   }
 
  private:
   int root;
   MPI_Comm comm;
-  port in_port;
-  port out_port;
+
+  std::shared_ptr<port> in_port;
+  std::shared_ptr<port> out_port;
   buffer memory;
 
   int rank;
@@ -150,29 +216,41 @@ struct port_spec {
 };
 
 inline void connect(port_spec&& source, port_spec&& target) {
+  if (!source.c.enabled() || !target.c.enabled()) return;
+
   auto& source_port = source.c.get_out_port(source.k);
   auto& target_port = target.c.get_in_port(target.k);
+
   if (!compatible(source_port.get(), target_port.get())) {
     throw incompatible_exception();
   }
+
   target_port = source_port;
 }
 
 inline void connect(port_spec&& source, singular_io& target) {
+  if (!source.c.enabled() || !target.sending()) return;
+
   auto& source_port = source.c.get_out_port(source.k);
   auto& target_port = target.get_in_port();
+
   if (!compatible(source_port.get(), target_port.get())) {
     throw incompatible_exception();
   }
+
   target_port = source_port;
 }
 
 inline void connect(singular_io& source, port_spec&& target) {
+  if (!source.receiving() || !target.c.enabled()) return;
+
   auto& source_port = source.get_out_port();
   auto& target_port = target.c.get_in_port(target.k);
+
   if (!compatible(source_port.get(), target_port.get())) {
     throw incompatible_exception();
   }
+
   target_port = source_port;
 }
 
