@@ -77,7 +77,10 @@ class buffer {
 
   template <class T, class InputIt>
   buffer(InputIt first, InputIt last, const T& type_hint = T())
-      : info(std::make_shared<buffer_info>()) {
+      : info(new buffer_info(), [](buffer_info* p) {
+          free(p->ptr);
+          delete p;
+        }) {
     info->itemsize = sizeof(T);
     info->format = FormatDescriptor<T>::format();
     info->ndim = std::distance(first, last);
