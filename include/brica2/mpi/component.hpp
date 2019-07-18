@@ -101,7 +101,7 @@ template <class T> class proxy : public component_type, public singular_io {
  public:
   template <class S = std::initializer_list<ssize_t>>
   proxy(S&& s, int src, int dest, int tag = 0, MPI_Comm comm = MPI_COMM_WORLD)
-      : src(src), dest(dest), tag(tag), comm(comm) {
+      : src(src), dest(dest), tag(tag), comm(comm), request(MPI_REQUEST_NULL) {
     MPI_Comm_rank(comm, &rank);
     // clang-format off
     if (rank == src) in_port = std::make_shared<port>(std::forward<S>(s), T());
@@ -147,7 +147,8 @@ template <class T> class proxy : public component_type, public singular_io {
   }
 
   virtual void expose() override {
-    if (sending() || receiving()) MPI_Wait(&request, &status);
+    if (request != MPI_REQUEST_NULL) MPI_Wait(&request, &status);
+    request = MPI_REQUEST_NULL;
     if (receiving()) out_port->set(*memory);
   }
 
