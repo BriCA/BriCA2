@@ -90,7 +90,12 @@ class buffer {
   }
 
  private:
-  void reset(buffer_info* ptr) { info.reset(ptr); }
+  void reset(buffer_info* ptr) {
+    info.reset(ptr, [](buffer_info* p) {
+      free(p->ptr);
+      delete p;
+    });
+  }
 
  public:
   friend buffer empty_like(const buffer&);
