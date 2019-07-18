@@ -191,8 +191,8 @@ class broadcast : public component_type, public singular_io {
   }
 
   virtual void execute() override {
-    void* buf = memory.data();
-    int count = memory.size();
+    void* buf = memory->data();
+    int count = memory->size();
     MPI_Bcast(buf, count, datatype<T>(), root, comm);
   }
 
