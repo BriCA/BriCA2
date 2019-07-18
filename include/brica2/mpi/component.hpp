@@ -206,7 +206,7 @@ class broadcast : public component_type, public singular_io {
 
   std::shared_ptr<port> in_port;
   std::shared_ptr<port> out_port;
-  buffer memory;
+  std::shared_ptr<buffer> memory;
 
   int rank;
 };
