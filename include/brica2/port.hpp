@@ -11,7 +11,7 @@ class port {
   port(S&& s, const T& type_hint = T())
       : self(std::make_shared<impl>(std::forward<S>(s), type_hint)) {}
 
-  port() = delete;
+  port() = default;
   port(const port&) = default;
   port(port&&) = default;
   port& operator=(const port&) = default;
@@ -20,6 +20,11 @@ class port {
   buffer& get() { return self->content; }
   void set(const buffer& b) { self->content = b; }
   void set(buffer&& b) { self->content = std::move(b); }
+
+  template <class T, class S = std::initializer_list<ssize_t>>
+  void reshape(S&& s) {
+    self = std::make_shared<impl>(std::forward<S>(s), T());
+  }
 
   friend bool operator==(const port&, const port&);
   friend bool operator!=(const port&, const port&);

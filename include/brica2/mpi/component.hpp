@@ -103,10 +103,8 @@ template <class T> class proxy : public component_type, public singular_io {
   proxy(S&& s, int src, int dest, int tag = 0, MPI_Comm comm = MPI_COMM_WORLD)
       : src(src), dest(dest), tag(tag), comm(comm), request(MPI_REQUEST_NULL) {
     MPI_Comm_rank(comm, &rank);
-    // clang-format off
-    if (rank == src) in_port = std::make_shared<port>(std::forward<S>(s), T());
-    if (rank == dest) out_port = std::make_shared<port>(std::forward<S>(s), T());
-    // clang-format on
+    if (rank == src) in_port.reshape<T>(std::forward<S>(s));
+    if (rank == dest) out_port.reshape<T>(std::forward<S>(s));
     if (rank == src || rank == dest) {
       memory = std::make_shared<buffer>(std::forward<S>(s), T());
     }
@@ -116,12 +114,12 @@ template <class T> class proxy : public component_type, public singular_io {
   virtual bool receiving() const override { return rank == dest; }
 
   virtual port& get_in_port() override {
-    if (sending()) return *in_port;
+    if (sending()) return in_port;
     throw bad_rank();
   }
 
   virtual port& get_out_port() override {
-    if (receiving()) return *out_port;
+    if (receiving()) return out_port;
     throw bad_rank();
   }
 
@@ -138,7 +136,7 @@ template <class T> class proxy : public component_type, public singular_io {
   }
 
   virtual void collect() override {
-    if (sending()) *memory = in_port->get();
+    if (sending()) *memory = in_port.get();
   }
 
   virtual void execute() override {
@@ -149,7 +147,7 @@ template <class T> class proxy : public component_type, public singular_io {
   virtual void expose() override {
     if (request != MPI_REQUEST_NULL) MPI_Wait(&request, &status);
     request = MPI_REQUEST_NULL;
-    if (receiving()) out_port->set(*memory);
+    if (receiving()) out_port.set(*memory);
   }
 
  private:
@@ -158,8 +156,8 @@ template <class T> class proxy : public component_type, public singular_io {
   int tag;
   MPI_Comm comm;
 
-  std::shared_ptr<port> in_port;
-  std::shared_ptr<port> out_port;
+  port in_port;
+  port out_port;
   std::shared_ptr<buffer> memory;
 
   int rank;
@@ -179,15 +177,15 @@ class broadcast : public component_type, public singular_io {
   virtual bool receiving() const override { return rank != root; }
 
   virtual port& get_in_port() override {
-    if (sending()) return *in_port;
+    if (sending()) return in_port;
   }
 
   virtual port& get_out_port() override {
-    if (receiving()) return *out_port;
+    if (receiving()) return out_port;
   }
 
   virtual void collect() override {
-    if (sending()) *memory = in_port->get();
+    if (sending()) *memory = in_port.get();
   }
 
   virtual void execute() override {
@@ -197,15 +195,15 @@ class broadcast : public component_type, public singular_io {
   }
 
   virtual void expose() override {
-    if (receiving()) out_port->set(*memory);
+    if (receiving()) out_port.set(*memory);
   }
 
  private:
   int root;
   MPI_Comm comm;
 
-  std::shared_ptr<port> in_port;
-  std::shared_ptr<port> out_port;
+  port in_port;
+  port out_port;
   std::shared_ptr<buffer> memory;
 
   int rank;
