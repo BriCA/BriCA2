@@ -2,16 +2,54 @@
 #define __BRICA2_MPI_COMPONENT_HPP__
 
 #include "brica2/component.hpp"
+#include "brica2/logger.hpp"
 #include "brica2/mpi/datatype.hpp"
 
 #include <exception>
 #include <initializer_list>
 #include <memory>
 
+#include <string>
+#include <sstream>
+
 #include "mpi.h"
 
 namespace brica2 {
 namespace mpi {
+namespace detail {
+
+std::string format_error(std::string method, int errorcode) {
+  std::stringstream ss;
+  int rank, errorclass, resultlen;
+  char errorstring[MPI_MAX_ERROR_STRING];
+  MPI_Error_class(errorcode, &errorclass);
+  MPI_Error_string(errorcode, errorstring, &resultlen);
+  ss << method << " at rank " << rank << " error with code " << errorclass
+     << ": " << std::string(errorstring, resultlen);
+  std::string ret = ss.str();
+  return ret;
+}
+
+}  // namespace detail
+
+class mpi_exception : public std::exception {
+ public:
+  mpi_exception(std::string method, int errorcode)
+      : method_(method), errorcode_(errorcode) {}
+
+  const char* what() const noexcept override {
+    return detail::format_error(method_, errorcode_).c_str();
+  }
+
+ private:
+  std::string method_;
+  int errorcode_;
+};
+
+void handle_error(int errorcode) {
+  if (errorcode == MPI_SUCCESS) return;
+  brica2::logger::error(mpi_exception("MPI_Isend", errorcode));
+}
 
 class bad_rank : public std::exception {
  public:
@@ -126,13 +164,15 @@ template <class T> class proxy : public component_type, public singular_io {
   void send() {
     void* buf = memory->data();
     int count = memory->size();
-    MPI_Isend(buf, count, datatype<T>(), dest, tag, comm, &request);
+    handle_error(
+        MPI_Isend(buf, count, datatype<T>(), dest, tag, comm, &request));
   }
 
   void recv() {
     void* buf = memory->data();
     int count = memory->size();
-    MPI_Irecv(buf, count, datatype<T>(), src, tag, comm, &request);
+    handle_error(
+        MPI_Irecv(buf, count, datatype<T>(), src, tag, comm, &request));
   }
 
   virtual void collect() override {
@@ -145,7 +185,7 @@ template <class T> class proxy : public component_type, public singular_io {
   }
 
   virtual void expose() override {
-    if (request != MPI_REQUEST_NULL) MPI_Wait(&request, &status);
+    if (request != MPI_REQUEST_NULL) handle_error(MPI_Wait(&request, &status));
     request = MPI_REQUEST_NULL;
     if (receiving()) out_port.set(*memory);
   }
@@ -191,7 +231,7 @@ class broadcast : public component_type, public singular_io {
   virtual void execute() override {
     void* buf = memory->data();
     int count = memory->size();
-    MPI_Bcast(buf, count, datatype<T>(), root, comm);
+    handle_error(MPI_Bcast(buf, count, datatype<T>(), root, comm));
   }
 
   virtual void expose() override {

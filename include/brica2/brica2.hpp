@@ -5,5 +5,6 @@
 #include "brica2/component.hpp"
 #include "brica2/executors.hpp"
 #include "brica2/scheduler.hpp"
+#include "brica2/logger.hpp"
 
 #endif  // __BRICA2_HPP__

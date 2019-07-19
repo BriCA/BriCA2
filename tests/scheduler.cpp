@@ -1,5 +1,5 @@
-#include "brica2/brica2.hpp"
 #include "catch.hpp"
+#include "brica2/brica2.hpp"
 
 inline bool equal(const brica2::buffer& lhs, const brica2::buffer& rhs) {
   if (!compatible(lhs, rhs)) return false;
