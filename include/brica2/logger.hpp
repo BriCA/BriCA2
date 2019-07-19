@@ -8,7 +8,7 @@
 
 #ifndef BRICA2_LOGGER_EXTERN
 #define BRICA2_LOGGER_EXTERN 0
-#endif
+#endif  // BRICA2_LOGGER_EXTERN
 
 #if BRICA2_LOGGER_EXTERN
 #define BRICA2_LOGGER_DECL extern
@@ -18,7 +18,7 @@
       brica2::logger::detail::wrapper;
 #else
 #define BRICA2_LOGGER_DECL static
-#endif
+#endif  // BRICA2_LOGGER_EXTERN
 
 namespace brica2 {
 

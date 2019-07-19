@@ -14,6 +14,10 @@
 
 #include "mpi.h"
 
+#ifndef BRICA2_LOG_MPI
+#define BRICA2_LOG_MPI 0
+#endif  // BRICA2_LOG_MPI
+
 namespace brica2 {
 namespace mpi {
 namespace detail {
@@ -165,11 +169,13 @@ template <class T> class proxy : public component_type, public singular_io {
   void send() {
     void* buf = memory->data();
     int count = memory->size();
+#if BRICA2_LOG_MPI
     if (logger::enabled()) {
       std::stringstream ss;
-      ss << "MPI_Irecv at rank " << rank;
+      ss << "Call MPI_Irecv at rank " << rank;
       logger::info(ss.str());
     }
+#endif  // BRICA2_LOG_MPI
     handle_error(
         MPI_Isend(buf, count, datatype<T>(), dest, tag, comm, &request));
   }
@@ -177,22 +183,33 @@ template <class T> class proxy : public component_type, public singular_io {
   void recv() {
     void* buf = memory->data();
     int count = memory->size();
+#if BRICA2_LOG_MPI
     if (logger::enabled()) {
       std::stringstream ss;
-      ss << "MPI_Isend at rank " << rank;
+      ss << "Call MPI_Isend at rank " << rank;
       logger::info(ss.str());
     }
+#endif  // BRICA2_LOG_MPI
     handle_error(
         MPI_Irecv(buf, count, datatype<T>(), src, tag, comm, &request));
   }
 
   void wait() {
+#if BRICA2_LOG_MPI
     if (logger::enabled()) {
       std::stringstream ss;
-      ss << "MPI_Wait at rank " << rank;
+      ss << "Call MPI_Wait at rank " << rank;
       logger::info(ss.str());
     }
+#endif  // BRICA2_LOG_MPI
     handle_error(MPI_Wait(&request, &status));
+#if BRICA2_LOG_MPI
+    if (logger::enabled()) {
+      std::stringstream ss;
+      ss << "End MPI_Wait at rank " << rank;
+      logger::info(ss.str());
+    }
+#endif  // BRICA2_LOG_MPI
   }
 
   virtual void collect() override {
@@ -251,11 +268,13 @@ class broadcast : public component_type, public singular_io {
   virtual void execute() override {
     void* buf = memory->data();
     int count = memory->size();
+#if BRICA2_LOG_MPI
     if (logger::enabled()) {
       std::stringstream ss;
-      ss << "MPI_Bcast at rank " << rank;
+      ss << "Call MPI_Bcast at rank " << rank;
       logger::info(ss.str());
     }
+#endif  // BRICA2_LOG_MPI
     handle_error(MPI_Bcast(buf, count, datatype<T>(), root, comm));
   }
 
