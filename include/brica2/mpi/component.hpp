@@ -49,7 +49,7 @@ class mpi_exception : public std::exception {
 
 void handle_error(int errorcode) {
   if (errorcode == MPI_SUCCESS) return;
-  brica2::logger::error(mpi_exception("MPI_Isend", errorcode));
+  logger::error(mpi_exception("MPI_Isend", errorcode));
 }
 
 class bad_rank : public std::exception {
@@ -165,6 +165,11 @@ template <class T> class proxy : public component_type, public singular_io {
   void send() {
     void* buf = memory->data();
     int count = memory->size();
+    if (logger::enabled()) {
+      std::stringstream ss;
+      ss << "MPI_Irecv at rank " << rank;
+      logger::info(ss.str());
+    }
     handle_error(
         MPI_Isend(buf, count, datatype<T>(), dest, tag, comm, &request));
   }
@@ -172,8 +177,22 @@ template <class T> class proxy : public component_type, public singular_io {
   void recv() {
     void* buf = memory->data();
     int count = memory->size();
+    if (logger::enabled()) {
+      std::stringstream ss;
+      ss << "MPI_Isend at rank " << rank;
+      logger::info(ss.str());
+    }
     handle_error(
         MPI_Irecv(buf, count, datatype<T>(), src, tag, comm, &request));
+  }
+
+  void wait() {
+    if (logger::enabled()) {
+      std::stringstream ss;
+      ss << "MPI_Wait at rank " << rank;
+      logger::info(ss.str());
+    }
+    handle_error(MPI_Wait(&request, &status));
   }
 
   virtual void collect() override {
@@ -186,7 +205,7 @@ template <class T> class proxy : public component_type, public singular_io {
   }
 
   virtual void expose() override {
-    if (request != MPI_REQUEST_NULL) handle_error(MPI_Wait(&request, &status));
+    if (request != MPI_REQUEST_NULL) wait();
     request = MPI_REQUEST_NULL;
     if (receiving()) out_port.set(*memory);
   }
@@ -232,6 +251,11 @@ class broadcast : public component_type, public singular_io {
   virtual void execute() override {
     void* buf = memory->data();
     int count = memory->size();
+    if (logger::enabled()) {
+      std::stringstream ss;
+      ss << "MPI_Bcast at rank " << rank;
+      logger::info(ss.str());
+    }
     handle_error(MPI_Bcast(buf, count, datatype<T>(), root, comm));
   }
 

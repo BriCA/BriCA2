@@ -50,13 +50,15 @@ inline void enable(std::ostream& ostream) {
   detail::wrapper.reset(new detail::ostream_wrapper(ostream));
 }
 
+inline bool enabled() { return static_cast<bool>(detail::wrapper); }
+
 inline void disable() {
   std::lock_guard<std::mutex> lock{detail::mutex};
   detail::wrapper.release();
 }
 
 inline void log(std::string tag, std::string msg) {
-  if (!detail::wrapper) return;
+  if (!enabled()) return;
   std::lock_guard<std::mutex> lock{detail::mutex};
   detail::wrapper->log(tag, msg);
 }
