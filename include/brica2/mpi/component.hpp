@@ -22,6 +22,7 @@ std::string format_error(std::string method, int errorcode) {
   std::stringstream ss;
   int rank, errorclass, resultlen;
   char errorstring[MPI_MAX_ERROR_STRING];
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Error_class(errorcode, &errorclass);
   MPI_Error_string(errorcode, errorstring, &resultlen);
   ss << method << " at rank " << rank << " error with code " << errorclass
