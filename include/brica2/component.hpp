@@ -62,7 +62,7 @@ class basic_component : public component_type {
 
   virtual void execute() override {
     for (std::size_t i = 0; i < outputs.size(); ++i) {
-      outputs.index(i) = empty_like(outputs.index(i));
+      outputs.index(i) = zeros_like(outputs.index(i));
     }
     functor(inputs, outputs);
   }
