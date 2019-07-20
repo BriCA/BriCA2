@@ -193,13 +193,23 @@ template <class T> class proxy : public component_type, public singular_io {
   void wait() {
 #if BRICA2_LOG_MPI
     if (logger::enabled()) {
-      logger::info("Call MPI_Wait", rank);
+      if (sending()) {
+        logger::info("Call MPI_Wait for MPI_Isend", src, dest, tag);
+      }
+      if (receiving()) {
+        logger::info("Call MPI_Wait for MPI_Irecv", src, dest, tag);
+      }
     }
 #endif  // BRICA2_LOG_MPI
     handle_error(MPI_Wait(&request, &status));
 #if BRICA2_LOG_MPI
     if (logger::enabled()) {
-      logger::info("End MPI_Wait", rank);
+      if (sending()) {
+        logger::info("End MPI_Wait for MPI_Isend", src, dest, tag);
+      }
+      if (receiving()) {
+        logger::info("End MPI_Wait for MPI_Irecv", src, dest, tag);
+      }
     }
 #endif  // BRICA2_LOG_MPI
   }
