@@ -36,12 +36,19 @@ BRICA2_LOGGER_DECL std::mutex mutex;
 struct ostream_wrapper {
   std::ostream& ostream;
   explicit ostream_wrapper(std::ostream& init) : ostream(init) {}
-  void log(std::string tag, std::string msg) {
-    ostream << tag << " " << msg << std::endl;
-  }
 };
 
 BRICA2_LOGGER_DECL std::unique_ptr<ostream_wrapper> wrapper;
+
+template <class Head> inline void log_impl(Head&& head) {
+  wrapper->ostream << head << std::endl;
+}
+
+template <class Head, class... Tail>
+inline void log_impl(Head&& head, Tail&&... tail) {
+  wrapper->ostream << head << " ";
+  log_impl(std::forward<Tail>(tail)...);
+}
 
 }  // namespace detail
 
@@ -57,14 +64,20 @@ inline void disable() {
   detail::wrapper.release();
 }
 
-inline void log(std::string tag, std::string msg) {
+template <class... Args> inline void log(std::string tag, Args&&... args) {
   if (!enabled()) return;
   std::lock_guard<std::mutex> lock{detail::mutex};
-  detail::wrapper->log(tag, msg);
+  detail::log_impl(tag, std::forward<Args>(args)...);
 }
 
-inline void info(std::string msg) { log("[INFO ]", msg); }
-inline void warn(std::string msg) { log("[WARN ]", msg); }
+template <class... Args> inline void info(Args&&... args) {
+  log("[INFO ]", std::forward<Args>(args)...);
+}
+
+template <class... Args> inline void warn(Args&&... args) {
+  log("[WARN ]", std::forward<Args>(args)...);
+}
+
 inline void error(std::exception&& e) {
   log("[ERROR]", e.what());
   throw e;

@@ -171,9 +171,7 @@ template <class T> class proxy : public component_type, public singular_io {
     int count = memory->size();
 #if BRICA2_LOG_MPI
     if (logger::enabled()) {
-      std::stringstream ss;
-      ss << "Call MPI_Irecv at rank " << rank;
-      logger::info(ss.str());
+      logger::info("Call MPI_Isend", count, src, dest, tag);
     }
 #endif  // BRICA2_LOG_MPI
     handle_error(
@@ -185,9 +183,7 @@ template <class T> class proxy : public component_type, public singular_io {
     int count = memory->size();
 #if BRICA2_LOG_MPI
     if (logger::enabled()) {
-      std::stringstream ss;
-      ss << "Call MPI_Isend at rank " << rank;
-      logger::info(ss.str());
+      logger::info("Call MPI_Irecv", count, src, dest, tag);
     }
 #endif  // BRICA2_LOG_MPI
     handle_error(
@@ -197,17 +193,13 @@ template <class T> class proxy : public component_type, public singular_io {
   void wait() {
 #if BRICA2_LOG_MPI
     if (logger::enabled()) {
-      std::stringstream ss;
-      ss << "Call MPI_Wait at rank " << rank;
-      logger::info(ss.str());
+      logger::info("Call MPI_Wait", rank);
     }
 #endif  // BRICA2_LOG_MPI
     handle_error(MPI_Wait(&request, &status));
 #if BRICA2_LOG_MPI
     if (logger::enabled()) {
-      std::stringstream ss;
-      ss << "End MPI_Wait at rank " << rank;
-      logger::info(ss.str());
+      logger::info("End MPI_Wait", rank);
     }
 #endif  // BRICA2_LOG_MPI
   }
@@ -270,9 +262,7 @@ class broadcast : public component_type, public singular_io {
     int count = memory->size();
 #if BRICA2_LOG_MPI
     if (logger::enabled()) {
-      std::stringstream ss;
-      ss << "Call MPI_Bcast at rank " << rank;
-      logger::info(ss.str());
+      logger::info("Call MPI_Bcast", count, rank, root);
     }
 #endif  // BRICA2_LOG_MPI
     handle_error(MPI_Bcast(buf, count, datatype<T>(), root, comm));
