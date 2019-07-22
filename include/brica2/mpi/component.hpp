@@ -8,7 +8,6 @@
 #include <exception>
 #include <initializer_list>
 #include <memory>
-#include <mutex>
 
 #include <string>
 #include <sstream>
@@ -168,7 +167,6 @@ template <class T> class proxy : public component_type, public singular_io {
   }
 
   void send() {
-    std::lock_guard<std::mutex> lock{mutex};
     void* buf = memory->data();
     int count = memory->size();
 #if BRICA2_LOG_MPI
@@ -181,7 +179,6 @@ template <class T> class proxy : public component_type, public singular_io {
   }
 
   void recv() {
-    std::lock_guard<std::mutex> lock{mutex};
     void* buf = memory->data();
     int count = memory->size();
 #if BRICA2_LOG_MPI
@@ -194,7 +191,6 @@ template <class T> class proxy : public component_type, public singular_io {
   }
 
   void wait() {
-    std::lock_guard<std::mutex> lock{mutex};
 #if BRICA2_LOG_MPI
     if (logger::enabled()) {
       if (sending()) {
@@ -242,8 +238,6 @@ template <class T> class proxy : public component_type, public singular_io {
   port in_port;
   port out_port;
   std::shared_ptr<buffer> memory;
-
-  std::mutex mutex;
 
   int rank;
   MPI_Status status;
