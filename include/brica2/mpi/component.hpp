@@ -243,7 +243,7 @@ template <class T> class proxy : public component_type, public singular_io {
   port out_port;
   std::shared_ptr<buffer> memory;
 
-  std::mutex;
+  std::mutex mutex;
 
   int rank;
   MPI_Status status;
