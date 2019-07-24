@@ -31,21 +31,31 @@ class single_phase_scheduler {
     std::vector<std::function<void(void)>> fs(components.size());
     for (std::size_t i = 0; i < components.size(); ++i) {
       auto component = components[i];
-      fs[i] = [component]() {
+      auto f = [component]() {
         component->collect();
         component->execute();
       };
+
+      if (component->thread_safe()) {
+        executor.post(f);
+      } else {
+        f();
+      }
     }
 
-    for (auto f : fs) executor.post(f);
     executor.sync();
 
     for (std::size_t i = 0; i < components.size(); ++i) {
       auto component = components[i];
-      fs[i] = [component]() { component->expose(); };
+      auto f = [component]() { component->expose(); };
+
+      if (component->thread_safe()) {
+        executor.post(f);
+      } else {
+        f();
+      }
     }
 
-    for (auto f : fs) executor.post(f);
     executor.sync();
   }
 
@@ -92,22 +102,17 @@ class virtual_time_scheduler {
   void step() {
     duration_t time = event_queue.top().time;
 
-    std::vector<std::function<void(void)>> awake;
-    std::vector<std::function<void(void)>> asleep;
+    std::vector<component_type*> awake;
+    std::vector<component_type*> asleep;
 
     while (event_queue.top().time == time) {
       auto event = event_queue.top();
       event_queue.pop();
 
-      auto c = event.component;
-
       if (event.sleep) {
-        asleep.push_back([c]() { c->expose(); });
+        asleep.push_back(event.component);
       } else {
-        awake.push_back([c]() {
-          c->collect();
-          c->execute();
-        });
+        awake.push_back(event.component);
       }
 
       event.time += event.sleep ? event.timing.sleep : event.timing.interval;
@@ -116,10 +121,29 @@ class virtual_time_scheduler {
       event_queue.push(event);
     }
 
-    for (auto f : asleep) executor.post(f);
+    for (auto component : asleep) {
+      auto f = [component]() { component->expose(); };
+      if (component->thread_safe()) {
+        executor.post(f);
+      } else {
+        f();
+      }
+    }
+
     executor.sync();
 
-    for (auto f : awake) executor.post(f);
+    for (auto component : awake) {
+      auto f = [component]() {
+        component->collect();
+        component->execute();
+      };
+      if (component->thread_safe()) {
+        executor.post(f);
+      } else {
+        f();
+      }
+    }
+
     executor.sync();
   }
 

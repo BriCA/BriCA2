@@ -11,6 +11,7 @@
 namespace brica2 {
 
 struct component_type {
+  virtual bool thread_safe() const { return false; }
   virtual void collect() = 0;
   virtual void execute() = 0;
   virtual void expose() = 0;
@@ -32,6 +33,8 @@ class basic_component : public component_type {
   basic_component& operator=(basic_component&&) = default;
 
   virtual ~basic_component() {}
+
+  virtual bool thread_safe() const override { return true; }
 
   template <class T, class S = std::initializer_list<ssize_t>>
   void make_in_port(const std::string& key, S&& s) {

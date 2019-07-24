@@ -83,6 +83,8 @@ class component : public component_type {
 
   virtual ~component() {}
 
+  virtual bool thread_safe() const override { return true; }
+
   bool enabled() const { return wanted_rank == actual_rank; }
 
   template <class T, class S = std::initializer_list<ssize_t>>
