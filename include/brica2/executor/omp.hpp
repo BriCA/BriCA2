@@ -12,8 +12,9 @@ class omp : public executor_type {
   virtual void post(std::function<void()> f) override { fs.push_back(f); }
 
   virtual void sync() override {
+    std::size_t i;
 #pragma omp parallel for
-    for (std::size_t i = 0; i < fs.size(); ++i) {
+    for (i = 0; i < fs.size(); ++i) {
       fs[i]();
     }
     fs.clear();

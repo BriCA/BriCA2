@@ -64,10 +64,10 @@ inline void disable() {
   detail::wrapper.release();
 }
 
-template <class... Args> inline void log(std::string tag, Args&&... args) {
+template <class... Args> inline void log(Args&&... args) {
   if (!enabled()) return;
   std::lock_guard<std::mutex> lock{detail::mutex};
-  detail::log_impl(tag, std::forward<Args>(args)...);
+  detail::log_impl(std::forward<Args>(args)...);
 }
 
 template <class... Args> inline void info(Args&&... args) {

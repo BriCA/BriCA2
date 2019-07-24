@@ -82,6 +82,10 @@ class multi_phase_scheduler {
     for (auto phase : phases) phase.step();
   }
 
+  void step_phase(std::size_t i) {
+    if (i < phases.size()) phases[i].step();
+  }
+
  private:
   std::vector<single_phase_scheduler> phases;
   executor_type& executor;
