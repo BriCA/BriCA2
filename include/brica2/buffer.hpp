@@ -71,6 +71,8 @@ inline bool operator!=(const buffer_info& lhs, const buffer_info& rhs) {
 
 class buffer {
  public:
+  buffer() = default;
+
   template <class T, class S>
   explicit buffer(S&& s, const T& type_hint = T())
       : buffer(s.begin(), s.end(), type_hint) {}

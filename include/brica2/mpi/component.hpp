@@ -51,9 +51,9 @@ class mpi_exception : public std::exception {
   int errorcode_;
 };
 
-void handle_error(int errorcode) {
+void handle_error(std::string method, int errorcode) {
   if (errorcode == MPI_SUCCESS) return;
-  logger::error(mpi_exception("MPI_Isend", errorcode));
+  logger::error(mpi_exception(method, errorcode));
 }
 
 class bad_rank : public std::exception {
@@ -143,14 +143,11 @@ struct singular_io {
 template <class T> class proxy : public component_type, public singular_io {
  public:
   template <class S = std::initializer_list<ssize_t>>
-  proxy(S&& s, int src, int dest, int tag = 0, MPI_Comm comm = MPI_COMM_WORLD)
+  proxy(S&& s, int src, int dest, int tag = 1, MPI_Comm comm = MPI_COMM_WORLD)
       : src(src), dest(dest), tag(tag), comm(comm), request(MPI_REQUEST_NULL) {
     MPI_Comm_rank(comm, &rank);
-    if (rank == src) in_port.reshape<T>(std::forward<S>(s));
-    if (rank == dest) out_port.reshape<T>(std::forward<S>(s));
-    if (rank == src || rank == dest) {
-      memory = std::make_shared<buffer>(std::forward<S>(s), T());
-    }
+    if (rank == src) setup_send(std::forward<S>(s));
+    if (rank == dest) setup_recv(std::forward<S>(s));
   }
 
   virtual bool sending() const override { return rank == src; }
@@ -165,71 +162,51 @@ template <class T> class proxy : public component_type, public singular_io {
     if (receiving()) return out_port;
     throw bad_rank();
   }
-
-  void send() {
-    void* buf = memory->data();
-    int count = memory->size();
-#if BRICA2_LOG_MPI
-    if (logger::enabled()) {
-      logger::info("Call MPI_Isend", count, src, dest, tag);
-    }
-#endif  // BRICA2_LOG_MPI
-    handle_error(
-        MPI_Isend(buf, count, datatype<T>(), dest, tag, comm, &request));
-  }
-
-  void recv() {
-    void* buf = memory->data();
-    int count = memory->size();
-#if BRICA2_LOG_MPI
-    if (logger::enabled()) {
-      logger::info("Call MPI_Irecv", count, src, dest, tag);
-    }
-#endif  // BRICA2_LOG_MPI
-    handle_error(
-        MPI_Irecv(buf, count, datatype<T>(), src, tag, comm, &request));
-  }
-
-  void wait() {
-#if BRICA2_LOG_MPI
-    if (logger::enabled()) {
-      if (sending()) {
-        logger::info("Call MPI_Wait for MPI_Isend", src, dest, tag);
-      }
-      if (receiving()) {
-        logger::info("Call MPI_Wait for MPI_Irecv", src, dest, tag);
-      }
-    }
-#endif  // BRICA2_LOG_MPI
-    handle_error(MPI_Wait(&request, &status));
-#if BRICA2_LOG_MPI
-    if (logger::enabled()) {
-      if (sending()) {
-        logger::info("End MPI_Wait for MPI_Isend", src, dest, tag);
-      }
-      if (receiving()) {
-        logger::info("End MPI_Wait for MPI_Irecv", src, dest, tag);
-      }
-    }
-#endif  // BRICA2_LOG_MPI
-  }
-
   virtual void collect() override {
-    if (sending()) *memory = in_port.get();
+    if (sending()) {
+      std::memcpy(memory.data(), in_port.get().data(), memory.size_bytes());
+    }
   }
 
   virtual void execute() override {
-    if (sending()) send();
-    if (receiving()) recv();
+    if (sending() || receiving()) start();
   }
 
   virtual void expose() override {
-    if (request != MPI_REQUEST_NULL) wait();
-    request = MPI_REQUEST_NULL;
-    if (receiving()) out_port.set(*memory);
+    if (sending() || receiving()) wait();
+    if (receiving()) {
+      std::memcpy(out_port.get().data(), memory.data(), memory.size_bytes());
+    }
   }
 
  private:
+  template <class S> void setup_send(S&& s) {
+    memory = empty<T>(std::forward<S>(s));
+    in_port = port(std::forward<S>(s), T());
+
+    void* buf = memory.data();
+    int count = memory.size();
+
+    int error =
+        MPI_Ssend_init(buf, count, datatype<T>(), dest, tag, comm, &request);
+    handle_error("MPI_Send_init", error);
+  }
+
+  template <class S> void setup_recv(S&& s) {
+    memory = empty<T>(std::forward<S>(s));
+    out_port = port(std::forward<S>(s), T());
+
+    void* buf = memory.data();
+    int count = memory.size();
+
+    int error =
+        MPI_Recv_init(buf, count, datatype<T>(), src, tag, comm, &request);
+    handle_error("MPI_Recv_init", error);
+  }
+
+  void start() { handle_error("MPI_Start", MPI_Start(&request)); }
+  void wait() { handle_error("MPI_Wait", MPI_Wait(&request, &status)); }
+
   int src;
   int dest;
   int tag;
@@ -237,7 +214,7 @@ template <class T> class proxy : public component_type, public singular_io {
 
   port in_port;
   port out_port;
-  std::shared_ptr<buffer> memory;
+  buffer memory;
 
   int rank;
   MPI_Status status;
@@ -264,22 +241,26 @@ class broadcast : public component_type, public singular_io {
   }
 
   virtual void collect() override {
-    if (sending()) *memory = in_port.get();
+    if (sending()) {
+      std::memcpy(memory.data(), in_port.get().data(), memory.size_bytes());
+    }
   }
 
   virtual void execute() override {
-    void* buf = memory->data();
-    int count = memory->size();
+    void* buf = memory.data();
+    int count = memory.size();
 #if BRICA2_LOG_MPI
     if (logger::enabled()) {
       logger::info("Call MPI_Bcast", count, rank, root);
     }
 #endif  // BRICA2_LOG_MPI
-    handle_error(MPI_Bcast(buf, count, datatype<T>(), root, comm));
+    handle_error("MPI_Bcast", MPI_Bcast(buf, count, datatype<T>(), root, comm));
   }
 
   virtual void expose() override {
-    if (receiving()) out_port.set(*memory);
+    if (receiving()) {
+      std::memcpy(out_port.get().data(), memory.data(), memory.size_bytes());
+    }
   }
 
  private:
@@ -288,7 +269,7 @@ class broadcast : public component_type, public singular_io {
 
   port in_port;
   port out_port;
-  std::shared_ptr<buffer> memory;
+  buffer memory;
 
   int rank;
 };
@@ -299,8 +280,6 @@ struct port_spec {
 };
 
 inline void connect(port_spec&& source, port_spec&& target) {
-  if (!source.c.enabled() || !target.c.enabled()) return;
-
   auto& source_port = source.c.get_out_port(source.k);
   auto& target_port = target.c.get_in_port(target.k);
 
@@ -312,8 +291,6 @@ inline void connect(port_spec&& source, port_spec&& target) {
 }
 
 inline void connect(port_spec&& source, singular_io& target) {
-  if (!source.c.enabled() || !target.sending()) return;
-
   auto& source_port = source.c.get_out_port(source.k);
   auto& target_port = target.get_in_port();
 
@@ -325,8 +302,6 @@ inline void connect(port_spec&& source, singular_io& target) {
 }
 
 inline void connect(singular_io& source, port_spec&& target) {
-  if (!source.receiving() || !target.c.enabled()) return;
-
   auto& source_port = source.get_out_port();
   auto& target_port = target.c.get_in_port(target.k);
 
