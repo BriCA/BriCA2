@@ -44,6 +44,8 @@ class thread_pool {
     }
   }
 
+  auto size() const -> decltype(auto) { return workers.size(); }
+
  private:
   void spawn() {
     for (;;) {

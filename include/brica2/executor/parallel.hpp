@@ -30,21 +30,29 @@ class parallel : public executor_type {
   virtual ~parallel() { pool.join(); }
 
   virtual void post(std::function<void()> f) override {
-    ++total;
-    dispatch(pool, [=] {
+    if (pool.size() > 1) {
+      ++total;
+      dispatch(pool, [=] {
+        f();
+        ++count;
+        std::unique_lock<std::mutex> lock{mutex};
+        lock.unlock();
+        condition.notify_all();
+      });
+    } else {
       f();
-      ++count;
-      std::unique_lock<std::mutex> lock{mutex};
-      lock.unlock();
-      condition.notify_all();
-    });
+    }
   }
 
   virtual void sync() override {
-    std::unique_lock<std::mutex> lock{mutex};
-    if (count != total) condition.wait(lock, [&]() { return count == total; });
-    count = 0;
-    total = 0;
+    if (pool.size() > 1) {
+      std::unique_lock<std::mutex> lock{mutex};
+      if (count != total) {
+        condition.wait(lock, [&]() { return count == total; });
+      }
+      count = 0;
+      total = 0;
+    }
   }
 
  private:
