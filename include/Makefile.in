@@ -194,7 +194,7 @@ ECHO_T = @ECHO_T@
 EGREP = @EGREP@
 EXEEXT = @EXEEXT@
 GREP = @GREP@
-HAVE_CXX11 = @HAVE_CXX11@
+HAVE_CXX14 = @HAVE_CXX14@
 INSTALL = @INSTALL@
 INSTALL_DATA = @INSTALL_DATA@
 INSTALL_PROGRAM = @INSTALL_PROGRAM@
@@ -262,15 +262,20 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-nobase_include_HEADERS = brica/brica.hpp \
-			 brica/assocvec.hpp \
-			 brica/buffer.hpp \
-			 brica/component.hpp \
-			 brica/functor.hpp \
-			 brica/mpi.hpp \
-			 brica/port.hpp \
-			 brica/scheduler.hpp \
-			 brica/thread_pool.hpp
+nobase_include_HEADERS = brica2/buffer.hpp \
+                         brica2/component.hpp \
+                         brica2/executor.hpp \
+                         brica2/format.hpp \
+                         brica2/port.hpp \
+                         brica2/scheduler.hpp \
+                         brica2/sorted_map.hpp \
+                         brica2/typedef.h \
+                         brica2/type_traits.hpp \
+                         brica2/mpi.hpp \
+                         brica2/mpi/component.hpp \
+                         brica2/mpi/datatype.hpp \
+                         brica2/mpi/executor.hpp \
+                         brica2/brica2.hpp
 
 noinst_HEADERS = catch.hpp
 all: all-am

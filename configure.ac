@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.69])
-AC_INIT([brica], [2.0.0], [kotone {at} sfc.keio.ac.jp])
+AC_INIT([brica2], [1.0.0], [kotone {at} sfc.keio.ac.jp])
 AM_INIT_AUTOMAKE([foreign])
 AC_CONFIG_SRCDIR([include/catch.hpp])
 AC_CONFIG_HEADERS([config.h])
@@ -12,7 +12,7 @@ AC_CONFIG_MACRO_DIR([m4])
 # Checks for programs.
 AC_PROG_CXX
 AX_CXXFLAGS_WARN_ALL
-AX_CXX_COMPILE_STDCXX([11])
+AX_CXX_COMPILE_STDCXX([14])
 
 # Checks for libraries.
 
@@ -33,5 +33,9 @@ AC_CHECK_TYPES([ptrdiff_t])
 # Checks for library functions.
 AC_FUNC_MALLOC
 AC_CHECK_FUNCS([dup2 memset])
+
+# Checks for pthread
+AC_CHECK_HEADERS(pthread.h,, [AC_MSG_ERROR([pthread.h required])])
+AC_CHECK_LIB(pthread, pthread_create, [LIBS="$LIBS -lpthread"])
 
 AC_OUTPUT

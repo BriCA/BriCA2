@@ -16,7 +16,7 @@ DESCRIPTION = 'BriCA Version 2 Python bindings'
 URL = 'https://github.com/BriCA/BriCA2'
 EMAIL = 'kotone@sfc.keio.ac.jp'
 AUTHOR = 'Kotone Itaya'
-VERSION = '0.4.2'
+VERSION = '0.5.0'
 
 headers = [
     'include/brica/assocvec.hpp',
@@ -110,8 +110,6 @@ ext_modules = [
             get_pybind_include(user=True),
             # Path to BriCA headers
             "./include",
-            # Path to vendored ASIO standalone
-            "./vendor/asio-1.12.1/include"
         ],
         libraries=posix_flag(),
         language='c++'),

@@ -30,7 +30,9 @@
 
 # Caches
 /autom4te.cache/
+.deps/
 
 # Distribution / packaging
 BriCA2.egg-info/
 /dist/
+/build/

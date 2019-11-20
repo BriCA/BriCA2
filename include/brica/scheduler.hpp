@@ -27,7 +27,10 @@
 #include "brica/component.hpp"
 #include "brica/thread_pool.hpp"
 
+#include <atomic>
+#include <condition_variable>
 #include <functional>
+#include <mutex>
 #include <queue>
 #include <vector>
 
@@ -45,12 +48,59 @@ struct Timing {
 
 static const std::function<void()> nop([]() {});
 
-class VirtualTimePhasedScheduler {
- public:
-  VirtualTimePhasedScheduler(std::size_t n = 0, std::function<void()> f = nop)
-      : sync(f), pool(n) {}
+inline std::size_t default_concurrency(std::size_t n) {
+  if (n == 0) {
+    auto value = std::thread::hardware_concurrency();
+    return value == 0 ? std::size_t(1) : value;
+  }
+  return n;
+}
 
-  void add_component(IComponent* component, std::size_t phase) {
+class Executor {
+public:
+  Executor(std::size_t n) : pool(default_concurrency(n)), count(0), total(0) {}
+  virtual ~Executor() { pool.join(); }
+
+  void post(std::function<void()> f) {
+    if (pool.size() > 1) {
+      ++total;
+      dispatch(pool, [=] {
+        f();
+        ++count;
+        std::unique_lock<std::mutex> lock{mutex};
+        lock.unlock();
+        condition.notify_all();
+      });
+    } else {
+      f();
+    }
+  }
+
+  void sync() {
+    if (pool.size() > 1) {
+      std::unique_lock<std::mutex> lock{mutex};
+      if (count != total) {
+        condition.wait(lock, [&] { return count == total; });
+      }
+      count = 0;
+      total = 0;
+    }
+  }
+
+private:
+  ThreadPool pool;
+  std::atomic<std::size_t> count;
+  std::atomic<std::size_t> total;
+  std::mutex mutex;
+  std::condition_variable condition;
+};
+
+class VirtualTimePhasedScheduler {
+public:
+  VirtualTimePhasedScheduler(std::size_t n = 0, std::function<void()> f = nop)
+      : sync(f), exec(n) {}
+
+  void add_component(IComponent *component, std::size_t phase) {
     if (phase >= phases.size()) {
       phases.resize(phase + 1);
     }
@@ -60,55 +110,53 @@ class VirtualTimePhasedScheduler {
 
   void step() {
     for (std::size_t i = 0; i < phases.size(); ++i) {
-      pool.request(phases[i].size());
       for (std::size_t j = 0; j < phases[i].size(); ++j) {
-        IComponent* component = phases[i][j];
-        pool.enqueue([component] {
+        IComponent *component = phases[i][j];
+        exec.post([component] {
           component->collect();
           component->execute();
         });
       }
-      pool.sync();
+      exec.sync();
       sync();
 
-      pool.request(phases[i].size());
       for (std::size_t j = 0; j < phases[i].size(); ++j) {
-        IComponent* component = phases[i][j];
-        pool.enqueue([component] { component->expose(); });
+        IComponent *component = phases[i][j];
+        exec.post([component] { component->expose(); });
       }
-      pool.sync();
+      exec.sync();
       sync();
     }
   }
 
- private:
-  std::vector<std::vector<IComponent*>> phases;
+private:
+  std::vector<std::vector<IComponent *>> phases;
   std::function<void()> sync;
-  ThreadPool pool;
+  Executor exec;
 };
 
 class VirtualTimeScheduler {
   struct Event {
     Time time;
-    IComponent* component;
+    IComponent *component;
     Timing timing;
     bool sleep;
 
-    bool operator<(const Event& rhs) const { return time > rhs.time; }
+    bool operator<(const Event &rhs) const { return time > rhs.time; }
   };
 
- public:
-  VirtualTimeScheduler(std::size_t n = 0) : pool(n) {}
+public:
+  VirtualTimeScheduler(std::size_t n = 0) : exec(n) {}
 
-  void add_component(IComponent* component, Timing timing) {
+  void add_component(IComponent *component, Timing timing) {
     event_queue.push({timing.offset, component, timing, false});
   }
 
   void step() {
     Time time = event_queue.top().time;
 
-    std::queue<IComponent*> awake;
-    std::queue<IComponent*> asleep;
+    std::queue<IComponent *> awake;
+    std::queue<IComponent *> asleep;
 
     while (event_queue.top().time == time) {
       Event event = event_queue.top();
@@ -129,31 +177,29 @@ class VirtualTimeScheduler {
       event_queue.push(next);
     }
 
-    pool.request(asleep.size());
     while (!asleep.empty()) {
-      IComponent* component = asleep.front();
+      IComponent *component = asleep.front();
       asleep.pop();
-      pool.enqueue([component] { component->expose(); });
+      exec.post([component] { component->expose(); });
     }
-    pool.sync();
+    exec.sync();
 
-    pool.request(awake.size());
     while (!awake.empty()) {
-      IComponent* component = awake.front();
+      IComponent *component = awake.front();
       awake.pop();
-      pool.enqueue([component] {
+      exec.post([component] {
         component->collect();
         component->execute();
       });
     }
-    pool.sync();
+    exec.sync();
   }
 
- private:
+private:
   std::priority_queue<Event> event_queue;
-  ThreadPool pool;
+  Executor exec;
 };
 
-}  // namespace brica
+} // namespace brica
 
-#endif  // __BRICA_SCHEDULER_HPP__
+#endif // __BRICA_SCHEDULER_HPP__

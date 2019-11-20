@@ -1,6 +1,6 @@
 /******************************************************************************
  *
- * brica/thread_pool.hpp
+ * brica/ThreadPool.hpp
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -24,13 +24,10 @@
 #ifndef __BRICA_THREAD_POOL_HPP__
 #define __BRICA_THREAD_POOL_HPP__
 
-#define ASIO_STANDALONE
-
-#include <asio.hpp>
-
-#include <atomic>
+#include <condition_variable>
 #include <functional>
-#include <memory>
+#include <mutex>
+#include <queue>
 #include <thread>
 #include <vector>
 
@@ -38,45 +35,66 @@ namespace brica {
 
 class ThreadPool {
  public:
-  ThreadPool(std::size_t size = 0)
-      : work(std::make_shared<asio::io_service::work>(io_service)) {
-    if (size == 0) {
-      size = std::thread::hardware_concurrency();
-    }
-
+  ThreadPool(std::size_t size) : stop(false) {
     for (std::size_t i = 0; i < size; ++i) {
-      threads.emplace_back([this] { io_service.run(); });
+      workers.emplace_back([this] { spawn(); });
     }
   }
 
-  ~ThreadPool() {
-    work.reset();
-    for (std::size_t i = 0; i < threads.size(); ++i) {
-      threads[i].join();
+  virtual ~ThreadPool() {
+    if (!stop) join();
+  }
+
+  void post(std::function<void()>& f) {
+    {
+      std::lock_guard<std::mutex> lock{mutex};
+      tasks.push(f);
+    }
+
+    condition.notify_one();
+  }
+
+  void join() {
+    {
+      std::lock_guard<std::mutex> lock{mutex};
+      stop = true;
+    }
+
+    condition.notify_all();
+
+    for (std::size_t i = 0; i < workers.size(); ++i) {
+      workers[i].join();
     }
   }
 
-  void request(std::size_t n) { count = n; }
-
-  void enqueue(std::function<void()>&& f) {
-    io_service.post([this, f] {
-      f();
-      --count;
-    });
-  }
-
-  void sync() {
-    while (count > 0) {
-    }
-  }
+  std::size_t size() const { return workers.size(); }
 
  private:
-  asio::io_service io_service;
-  std::shared_ptr<asio::io_service::work> work;
-  std::vector<std::thread> threads;
+  void spawn() {
+    for (;;) {
+      std::function<void()> task;
+      {
+        std::unique_lock<std::mutex> lock{mutex};
+        condition.wait(lock, [this] { return !tasks.empty() || stop; });
+        if (stop && tasks.empty()) return;
+        task = std::move(tasks.front());
+        tasks.pop();
+      }
+      task();
+    }
+  }
 
-  std::atomic<std::size_t> count;
+  std::vector<std::thread> workers;
+  std::queue<std::function<void()>> tasks;
+
+  std::mutex mutex;
+  std::condition_variable condition;
+  bool stop;
 };
+
+inline void dispatch(ThreadPool& pool, std::function<void()> f) {
+  pool.post(f);
+}
 
 }  // namespace brica
 
