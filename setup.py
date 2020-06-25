@@ -102,23 +102,20 @@ def posix_flag():
     return ['rt']
 
 
-def get_includes():
-    include_dirs = []
-    for path in sysconfig.get_python_inc():
-        include_dirs.append(path)
-    for path in sysconfig.get_python_inc(plat_specific=True):
-        include_dirs.append(path)
-    include_dirs.append(get_pybind_include())
-    include_dirs.append(get_pybind_include(user=True))
-    include_dirs.append('./include')
-    return include_dirs
-
-
 ext_modules = [
     Extension(
         'brica',
         ['src/python_bindings.cpp'],
-        include_dirs=get_includes(),
+        include_dirs=[
+            # Python import paths
+            sysconfig.get_python_inc(),
+            sysconfig.get_python_inc(plat_specific=True),
+            # Path to pybind11 headers
+            get_pybind_include(),
+            get_pybind_include(user=True),
+            # Path to BriCA headers
+            "./include",
+        ],
         libraries=posix_flag(),
         language='c++'),
 ]
