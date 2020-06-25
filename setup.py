@@ -17,7 +17,7 @@ DESCRIPTION = 'BriCA Version 2 Python bindings'
 URL = 'https://github.com/BriCA/BriCA2'
 EMAIL = 'kotone@sfc.keio.ac.jp'
 AUTHOR = 'Kotone Itaya'
-VERSION = '0.5.3'
+VERSION = '0.5.4'
 
 headers = [
     'include/brica/assocvec.hpp',
@@ -211,7 +211,7 @@ setup(
     url=URL,
     packages=find_packages(exclude=('tests',)),
     ext_modules=ext_modules,
-    install_requires=['pybind11>=2.2', 'pfifo>=1.1.6'],
+    install_requires=['pybind11>=2.2', 'pfifo>=1.1.7'],
     license='Apache',
     headers=headers,
     cmdclass={
