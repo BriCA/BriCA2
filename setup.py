@@ -9,6 +9,8 @@ from shutil import rmtree
 import setuptools
 from setuptools import find_packages, setup, Command, Extension
 from setuptools.command.build_ext import build_ext
+
+from distutils import sysconfig
 from distutils.command.install_headers import install_headers
 
 NAME = 'BriCA2'
@@ -16,7 +18,7 @@ DESCRIPTION = 'BriCA Version 2 Python bindings'
 URL = 'https://github.com/BriCA/BriCA2'
 EMAIL = 'kotone@sfc.keio.ac.jp'
 AUTHOR = 'Kotone Itaya'
-VERSION = '0.5.0'
+VERSION = '0.5.1'
 
 headers = [
     'include/brica/assocvec.hpp',
@@ -100,17 +102,23 @@ def posix_flag():
     return ['rt']
 
 
+def get_includes():
+    include_dirs = []
+    for path in sysconfig.get_python_inc():
+        include_dirs.append(path)
+    for path in sysconfig.get_python_inc(plat_specific=True):
+        include_dirs.append(path)
+    include_dirs.append(get_pybind_include())
+    include_dirs.append(get_pybind_include(user=True))
+    include_dirs.append('./include')
+    return include_dirs
+
+
 ext_modules = [
     Extension(
         'brica',
         ['src/python_bindings.cpp'],
-        include_dirs=[
-            # Path to pybind11 headers
-            get_pybind_include(),
-            get_pybind_include(user=True),
-            # Path to BriCA headers
-            "./include",
-        ],
+        include_dirs=get_includes(),
         libraries=posix_flag(),
         language='c++'),
 ]
