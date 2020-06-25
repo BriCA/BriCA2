@@ -10,7 +10,6 @@ import setuptools
 from setuptools import find_packages, setup, Command, Extension
 from setuptools.command.build_ext import build_ext
 
-from distutils import sysconfig
 from distutils.command.install_headers import install_headers
 
 NAME = 'BriCA2'
@@ -18,7 +17,7 @@ DESCRIPTION = 'BriCA Version 2 Python bindings'
 URL = 'https://github.com/BriCA/BriCA2'
 EMAIL = 'kotone@sfc.keio.ac.jp'
 AUTHOR = 'Kotone Itaya'
-VERSION = '0.5.2'
+VERSION = '0.5.3'
 
 headers = [
     'include/brica/assocvec.hpp',
@@ -95,6 +94,18 @@ class get_pybind_include(object):
         import pybind11
         return pybind11.get_include(self.user)
 
+    
+class get_pfifo_include(object):
+    """Helper class to determine the pfifo include path
+
+    The purpose of this class is to postpone importing pfifo
+    until it is actually installed, so that the ``get_include()``
+    method can be invoked. """
+
+    def __str__(self):
+        import pfifo
+        return pfifo.get_include()
+
 
 def posix_flag():
     if sys.platform =='darwin':
@@ -107,12 +118,11 @@ ext_modules = [
         'brica',
         ['src/python_bindings.cpp'],
         include_dirs=[
-            # Python import paths
-            sysconfig.get_python_inc(),
-            sysconfig.get_python_inc(plat_specific=True),
             # Path to pybind11 headers
             get_pybind_include(),
             get_pybind_include(user=True),
+            # Path to pfifo headers
+            get_pfifo_include(),
             # Path to BriCA headers
             "./include",
         ],
