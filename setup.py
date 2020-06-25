@@ -18,7 +18,7 @@ DESCRIPTION = 'BriCA Version 2 Python bindings'
 URL = 'https://github.com/BriCA/BriCA2'
 EMAIL = 'kotone@sfc.keio.ac.jp'
 AUTHOR = 'Kotone Itaya'
-VERSION = '0.5.1'
+VERSION = '0.5.2'
 
 headers = [
     'include/brica/assocvec.hpp',
